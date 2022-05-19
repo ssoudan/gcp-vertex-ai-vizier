@@ -1,0 +1,21 @@
+[package]
+name = "gcp-ai-platform-vizier"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+authors = ["Sebastien Soudan <sebastien.soudan@gmail.com>"]
+
+[lib]
+doctest = false
+
+[dependencies]
+tonic = { version = "0.7", features = ["tls", "compression"] }
+prost = "0.10.0"
+prost-types = "0.10.0"
+tokio = "1.18.2"
+thiserror = "1.0.31"
+gouth = "0.1.0"
+regex = "1.5.5"
+
+[build-dependencies]
+tonic-build = { version = "0.7", features = ["prost", "compression"] }
