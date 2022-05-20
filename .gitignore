@@ -2,3 +2,4 @@
 /Cargo.lock
 /.idea/
 gha-creds-*.json
+gcp.json

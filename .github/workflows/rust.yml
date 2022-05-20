@@ -22,29 +22,34 @@ jobs:
       - uses: actions/checkout@v3
       - name: Build
         run: cargo build --verbose
-      - id: 'auth'
-        name: 'Authenticate to Google Cloud'
-        uses: 'google-github-actions/auth@v0'
-        with:
-          credentials_json: '${{ secrets.GOOGLE_CREDENTIALS }}'
+#      - id: 'auth'
+#        name: 'Authenticate to Google Cloud'
+#        uses: 'google-github-actions/auth@v0'
+#        with:
+##          credentials_json: '${{ secrets.GOOGLE_CREDENTIALS }}'
 #          workload_identity_provider: 'projects/38828066182/locations/global/workloadIdentityPools/gh-pool/providers/gh-provider'
 #          service_account: 'github-action@ssn-public-dev.iam.gserviceaccount.com'
 #          create_credentials_file: true
 #          id_token_include_email: true
 #          export_environment_variables: true
-          cleanup_credentials: true
-      - name: 'Set up Cloud SDK'
-        uses: google-github-actions/setup-gcloud@v0
-        with:
-          project_id: ${{ env.PROJECT_ID }}
-          export_default_credentials: true
-      - name: 'Use gcloud CLI'
-        run: 'gcloud info'
+#          cleanup_credentials: true
+#      - name: 'Set up Cloud SDK'
+#        uses: google-github-actions/setup-gcloud@v0
+#        with:
+#          project_id: ${{ env.PROJECT_ID }}
+#          export_default_credentials: true
+#      - name: 'Use gcloud CLI'
+#        run: 'gcloud info'
+      - name: Create key
+        run: echo "${{secrets.GOOGLE_CREDENTIALS }}" > gcp.json
       - name: Run tests
         env:
           GOOGLE_CLOUD_PROJECT: 'ssn-public-dev'
+          GOOGLE_APPLICATION_CREDENTIALS: '${{ github.workspace }}/gcp.json'
 #          GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
         run: cargo test --verbose
+      - name: Cleanup
+        run: rm -f gcp.json
 
   clippy_check:
     runs-on: ubuntu-latest
