@@ -19,16 +19,26 @@ jobs:
       id-token: 'write'
 
     steps:
-    - uses: actions/checkout@v3
-    - id: 'auth'
-      name: 'Authenticate to Google Cloud'
-      uses: 'google-github-actions/auth@v0'
-      with:
-        workload_identity_provider: 'projects/38828066182/locations/global/workloadIdentityPools/gh-pool/providers/gh-provider'
-        service_account: 'github-action@ssn-public-dev.iam.gserviceaccount.com'
-    - name: 'Set up Cloud SDK'
-      uses: 'google-github-actions/setup-gcloud@v0'
-    - name: Build
-      run: cargo build --verbose
-#     - name: Run tests
-#       run: cargo test --verbose
+      - uses: actions/checkout@v3
+      - id: 'auth'
+        name: 'Authenticate to Google Cloud'
+        uses: 'google-github-actions/auth@v0'
+        with:
+          workload_identity_provider: 'projects/38828066182/locations/global/workloadIdentityPools/gh-pool/providers/gh-provider'
+          service_account: 'github-action@ssn-public-dev.iam.gserviceaccount.com'
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v0'
+      - name: Build
+        run: cargo build --verbose
+      - name: Run tests
+        run: cargo test --verbose
+
+  clippy_check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - run: rustup component add clippy
+      - uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --all-features
