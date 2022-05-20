@@ -20,16 +20,19 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+      - name: Build
+        run: cargo build --verbose
       - id: 'auth'
         name: 'Authenticate to Google Cloud'
         uses: 'google-github-actions/auth@v0'
         with:
           workload_identity_provider: 'projects/38828066182/locations/global/workloadIdentityPools/gh-pool/providers/gh-provider'
           service_account: 'github-action@ssn-public-dev.iam.gserviceaccount.com'
-      - name: 'Set up Cloud SDK'
-        uses: 'google-github-actions/setup-gcloud@v0'
-      - name: Build
-        run: cargo build --verbose
+          create_credentials_file: true
+          export_environment_variables: true
+          cleanup_credentials: true
+      #      - name: 'Set up Cloud SDK'
+      #        uses: 'google-github-actions/setup-gcloud@v0'
       - name: Run tests
         run: cargo test --verbose
 
