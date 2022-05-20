@@ -33,7 +33,12 @@ jobs:
 #          export_environment_variables: true
           cleanup_credentials: true
       - name: 'Set up Cloud SDK'
-        uses: 'google-github-actions/setup-gcloud@v0'
+        uses: google-github-actions/setup-gcloud@master
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+          export_default_credentials: true
+      - name: 'Use gcloud CLI'
+        run: 'gcloud info'
       - name: Run tests
         env:
           GOOGLE_CLOUD_PROJECT: 'ssn-public-dev'
