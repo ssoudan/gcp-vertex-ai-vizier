@@ -12,116 +12,213 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use regex::Regex;
+pub mod get {
+    use crate::google::cloud::aiplatform::v1::GetStudyRequest;
 
-use crate::google::cloud::aiplatform::v1::{
-    CreateStudyRequest, ListStudiesRequest, Study, StudySpec,
-};
+    pub struct RequestBuilder {
+        project: String,
+        location: String,
+        study: String,
+    }
 
-#[derive(thiserror::Error, Debug)]
-pub enum Error {
-    #[error("display_name must match [a-z][a-z0-9_]*")]
-    InvalidDisplayName,
-    #[error("display_name is required")]
-    DisplayNameRequired,
-    #[error("study_spec is required")]
-    StudySpecRequired,
-    #[error("study_spec and display_name is required")]
-    StudySpecAndDisplayNameRequired,
-}
-
-pub struct ListStudiesRequestBuilder {
-    project: String,
-    location: String,
-    page_size: Option<i32>,
-    page_token: Option<String>,
-}
-
-impl ListStudiesRequestBuilder {
-    pub fn new(project: String, location: String) -> Self {
-        ListStudiesRequestBuilder {
-            project,
-            location,
-            page_size: None,
-            page_token: None,
+    impl RequestBuilder {
+        pub fn new(project: String, location: String, study: String) -> Self {
+            RequestBuilder {
+                project,
+                location,
+                study,
+            }
         }
-    }
 
-    pub fn with_page_size(mut self, page_size: i32) -> Self {
-        self.page_size = Some(page_size);
-        self
-    }
-
-    pub fn with_page_token(mut self, page_token: String) -> Self {
-        self.page_token = Some(page_token);
-        self
-    }
-
-    pub fn build(self) -> ListStudiesRequest {
-        ListStudiesRequest {
-            parent: format!(
-                "projects/{project}/locations/{location}",
-                project = self.project,
-                location = self.location
-            ),
-            page_size: self.page_size.unwrap_or(0),
-            page_token: self.page_token.unwrap_or_default(),
+        pub fn build(self) -> GetStudyRequest {
+            GetStudyRequest {
+                name: format!(
+                    "projects/{project}/locations/{location}/studies/{study}",
+                    project = self.project,
+                    location = self.location,
+                    study = self.study
+                ),
+            }
         }
     }
 }
 
-pub struct CreateStudyRequestBuilder {
-    project: String,
-    location: String,
-    display_name: Option<String>,
-    study_spec: Option<StudySpec>,
-}
+pub mod delete {
+    use crate::google::cloud::aiplatform::v1::DeleteStudyRequest;
 
-impl CreateStudyRequestBuilder {
-    pub fn new(project: String, location: String) -> Self {
-        Self {
-            project,
-            location,
-            display_name: None,
-            study_spec: None,
+    pub struct RequestBuilder {
+        project: String,
+        location: String,
+        study: String,
+    }
+
+    impl RequestBuilder {
+        pub fn new(project: String, location: String, study: String) -> Self {
+            RequestBuilder {
+                project,
+                location,
+                study,
+            }
+        }
+
+        pub fn build(self) -> DeleteStudyRequest {
+            DeleteStudyRequest {
+                name: format!(
+                    "projects/{project}/locations/{location}/studies/{study}",
+                    project = self.project,
+                    location = self.location,
+                    study = self.study
+                ),
+            }
         }
     }
+}
 
-    pub fn with_display_name(mut self, display_name: String) -> Self {
-        self.display_name = Some(display_name);
-        self
+pub mod lookup {
+    use crate::google::cloud::aiplatform::v1::LookupStudyRequest;
+
+    pub struct RequestBuilder {
+        project: String,
+        location: String,
+        display_name: String,
     }
 
-    pub fn with_study_spec(mut self, study_spec: StudySpec) -> Self {
-        self.study_spec = Some(study_spec);
-        self
+    impl RequestBuilder {
+        pub fn new(project: String, location: String, display_name: String) -> Self {
+            RequestBuilder {
+                project,
+                location,
+                display_name,
+            }
+        }
+
+        pub fn build(self) -> LookupStudyRequest {
+            LookupStudyRequest {
+                parent: format!(
+                    "projects/{project}/locations/{location}",
+                    project = self.project,
+                    location = self.location,
+                ),
+                display_name: self.display_name,
+            }
+        }
+    }
+}
+
+pub mod list {
+    use crate::google::cloud::aiplatform::v1::ListStudiesRequest;
+
+    pub struct RequestBuilder {
+        project: String,
+        location: String,
+        page_size: Option<i32>,
+        page_token: Option<String>,
     }
 
-    pub fn build(self) -> Result<CreateStudyRequest, Error> {
-        match (self.display_name, self.study_spec) {
-            (Some(display_name), Some(study_spec)) => {
-                let re = Regex::new(r"^[a-z][a-z\d_]*$").unwrap();
-                if !re.is_match(display_name.as_str()) {
-                    return Err(Error::InvalidDisplayName);
+    impl RequestBuilder {
+        pub fn new(project: String, location: String) -> Self {
+            RequestBuilder {
+                project,
+                location,
+                page_size: None,
+                page_token: None,
+            }
+        }
+
+        pub fn with_page_size(mut self, page_size: i32) -> Self {
+            self.page_size = Some(page_size);
+            self
+        }
+
+        pub fn with_page_token(mut self, page_token: String) -> Self {
+            self.page_token = Some(page_token);
+            self
+        }
+
+        pub fn build(self) -> ListStudiesRequest {
+            ListStudiesRequest {
+                parent: format!(
+                    "projects/{project}/locations/{location}",
+                    project = self.project,
+                    location = self.location
+                ),
+                page_size: self.page_size.unwrap_or(0),
+                page_token: self.page_token.unwrap_or_default(),
+            }
+        }
+    }
+}
+
+pub mod create {
+    use regex::Regex;
+
+    use crate::google::cloud::aiplatform::v1::{CreateStudyRequest, Study, StudySpec};
+
+    #[derive(thiserror::Error, Debug)]
+    pub enum Error {
+        #[error("display_name must match [a-z][a-z0-9_]*")]
+        InvalidDisplayName,
+        #[error("display_name is required")]
+        DisplayNameRequired,
+        #[error("study_spec is required")]
+        StudySpecRequired,
+        #[error("study_spec and display_name is required")]
+        StudySpecAndDisplayNameRequired,
+    }
+
+    pub struct RequestBuilder {
+        project: String,
+        location: String,
+        display_name: Option<String>,
+        study_spec: Option<StudySpec>,
+    }
+
+    impl RequestBuilder {
+        pub fn new(project: String, location: String) -> Self {
+            Self {
+                project,
+                location,
+                display_name: None,
+                study_spec: None,
+            }
+        }
+
+        pub fn with_display_name(mut self, display_name: String) -> Self {
+            self.display_name = Some(display_name);
+            self
+        }
+
+        pub fn with_study_spec(mut self, study_spec: StudySpec) -> Self {
+            self.study_spec = Some(study_spec);
+            self
+        }
+
+        pub fn build(self) -> Result<CreateStudyRequest, Error> {
+            match (self.display_name, self.study_spec) {
+                (Some(display_name), Some(study_spec)) => {
+                    let re = Regex::new(r"^[a-z][a-z\d_]*$").unwrap();
+                    if !re.is_match(display_name.as_str()) {
+                        return Err(Error::InvalidDisplayName);
+                    }
+
+                    Ok(CreateStudyRequest {
+                        parent: format!(
+                            "projects/{project}/locations/{location}",
+                            project = &self.project,
+                            location = &self.location
+                        ),
+                        study: Some(Study {
+                            display_name,
+                            study_spec: Some(study_spec),
+                            ..Default::default()
+                        }),
+                    })
                 }
 
-                Ok(CreateStudyRequest {
-                    parent: format!(
-                        "projects/{project}/locations/{location}",
-                        project = &self.project,
-                        location = &self.location
-                    ),
-                    study: Some(Study {
-                        display_name,
-                        study_spec: Some(study_spec),
-                        ..Default::default()
-                    }),
-                })
+                (None, Some(_)) => Err(Error::DisplayNameRequired),
+                (Some(_), None) => Err(Error::StudySpecRequired),
+                (None, None) => Err(Error::StudySpecAndDisplayNameRequired),
             }
-
-            (None, Some(_)) => Err(Error::DisplayNameRequired),
-            (Some(_), None) => Err(Error::StudySpecRequired),
-            (None, None) => Err(Error::StudySpecAndDisplayNameRequired),
         }
     }
 }

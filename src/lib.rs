@@ -16,10 +16,12 @@ use google_authz::GoogleAuthz;
 use tonic::codegen::http::uri::InvalidUri;
 use tonic::transport::{Certificate, Channel, ClientTlsConfig};
 
+use crate::google::cloud::aiplatform::v1::{
+    DeleteStudyRequest, GetStudyRequest, LookupStudyRequest,
+};
 use google::cloud::aiplatform::v1::vizier_service_client::VizierServiceClient;
-use model::study::CreateStudyRequestBuilder;
 
-use crate::model::study::ListStudiesRequestBuilder;
+use crate::model::study;
 
 mod model;
 
@@ -77,7 +79,7 @@ impl VizierClient {
             .await?;
         let channel = GoogleAuthz::new(channel).await;
 
-        let service = VizierServiceClient::new(channel); // .send_gzip().accept_gzip();
+        let service = VizierServiceClient::new(channel).send_gzip().accept_gzip();
 
         Ok(Self {
             project,
@@ -86,18 +88,53 @@ impl VizierClient {
         })
     }
 
-    pub fn create_study_request_builder(&self) -> CreateStudyRequestBuilder {
-        CreateStudyRequestBuilder::new(self.project.clone(), self.location.clone())
+    pub fn create_study_request_builder(&self) -> study::create::RequestBuilder {
+        study::create::RequestBuilder::new(self.project.clone(), self.location.clone())
     }
 
-    pub fn create_list_studies_request_builder(&self) -> ListStudiesRequestBuilder {
-        ListStudiesRequestBuilder::new(self.project.clone(), self.location.clone())
+    pub fn create_get_study_request(&self, study: String) -> GetStudyRequest {
+        study::get::RequestBuilder::new(self.project.clone(), self.location.clone(), study).build()
+    }
+
+    pub fn create_delete_study_request(&self, study: String) -> DeleteStudyRequest {
+        study::delete::RequestBuilder::new(self.project.clone(), self.location.clone(), study)
+            .build()
+    }
+
+    pub fn create_lookup_study_request(&self, display_name: String) -> LookupStudyRequest {
+        study::lookup::RequestBuilder::new(
+            self.project.clone(),
+            self.location.clone(),
+            display_name,
+        )
+        .build()
+    }
+
+    pub fn create_list_studies_request_builder(&self) -> study::list::RequestBuilder {
+        study::list::RequestBuilder::new(self.project.clone(), self.location.clone())
     }
 }
 
 #[cfg(test)]
-mod tests {
+mod common {
+    use crate::VizierClient;
     use std::env;
+
+    pub(crate) async fn test_client() -> VizierClient {
+        let project = env::var("GOOGLE_CLOUD_PROJECT").unwrap();
+
+        let location = "us-central1".to_string();
+
+        VizierClient::new(project.clone(), location.clone())
+            .await
+            .unwrap()
+    }
+}
+
+#[cfg(test)]
+mod studies {
+    use super::common::test_client;
+    use tonic::Code;
 
     use crate::google::cloud::aiplatform::v1::study_spec::metric_spec::GoalType;
     use crate::google::cloud::aiplatform::v1::study_spec::parameter_spec::{
@@ -110,13 +147,7 @@ mod tests {
 
     #[tokio::test]
     async fn it_list_studies() {
-        let project = env::var("GOOGLE_CLOUD_PROJECT").unwrap();
-
-        let location = "us-central1".to_string();
-
-        let mut client = super::VizierClient::new(project.clone(), location.clone())
-            .await
-            .unwrap();
+        let mut client = test_client().await;
 
         let request = client
             .create_list_studies_request_builder()
@@ -132,14 +163,14 @@ mod tests {
         // TODO(ssoudan) look at generators and iterators
 
         if !studies.get_ref().next_page_token.is_empty() {
-            let mut token = studies.get_ref().next_page_token.clone();
+            let mut page_token = studies.get_ref().next_page_token.clone();
 
-            while !token.is_empty() {
-                println!("There is more! - {:?}", &token);
+            while !page_token.is_empty() {
+                println!("There is more! - {:?}", &page_token);
 
                 let request = client
                     .create_list_studies_request_builder()
-                    .with_page_token(studies.get_ref().next_page_token.clone())
+                    .with_page_token(page_token)
                     .with_page_size(2)
                     .build();
 
@@ -149,38 +180,14 @@ mod tests {
                     dbg!(&t.display_name);
                 }
 
-                token = studies.get_ref().next_page_token.clone();
+                page_token = studies.get_ref().next_page_token.clone();
             }
         }
     }
 
     #[tokio::test]
     async fn it_creates_studies() {
-        let project = env::var("GOOGLE_CLOUD_PROJECT").unwrap();
-
-        let location = "us-central1".to_string();
-
-        let mut client = super::VizierClient::new(project.clone(), location.clone())
-            .await
-            .unwrap();
-
-        // let req = ListStudiesRequest {
-        //     parent: format!("projects/{project}/locations/{location}").to_string(),
-        //     page_token: "".to_string(),
-        //     page_size: 0,
-        // };
-        //
-        // let trials = client.service.list_studies(req).await.unwrap();
-        // let trial_list = &trials.get_ref().studies;
-        // for t in trial_list {
-        //     println!("{:?}", *t);
-        // }
-        //
-        // // TODO(ssoudan) look at generators and iterators
-        //
-        // if !trials.get_ref().next_page_token.is_empty() {
-        //     println!("{:?}", trials.get_ref().next_page_token);
-        // }
+        let mut client = test_client().await;
 
         // TODO(ssoudan) StudySpec builder
         let study_spec = StudySpec {
@@ -234,6 +241,51 @@ mod tests {
             }
             Err(e) => {
                 dbg!(e);
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn it_can_get_a_study() {
+        let mut client = test_client().await;
+
+        let study = "53316451264".to_string();
+
+        let request = client.create_get_study_request(study);
+
+        let study = client.service.get_study(request).await.unwrap();
+        let study = study.get_ref();
+        dbg!(study);
+    }
+
+    #[tokio::test]
+    async fn it_finds_a_study_by_name() {
+        let mut client = test_client().await;
+
+        let display_name = "blah".to_string();
+
+        let request = client.create_lookup_study_request(display_name);
+
+        let study = client.service.lookup_study(request).await.unwrap();
+        let study = study.get_ref();
+        dbg!(study);
+    }
+
+    #[tokio::test]
+    async fn it_deletes_a_study() {
+        let mut client = test_client().await;
+
+        let study = "53316451265".to_string();
+
+        let request = client.create_delete_study_request(study);
+
+        match client.service.delete_study(request).await {
+            Ok(study) => {
+                let study = study.get_ref();
+                dbg!(study);
+            }
+            Err(err) => {
+                assert_eq!(err.code(), Code::NotFound);
             }
         }
     }
