@@ -41,11 +41,13 @@ jobs:
 #      - name: 'Use gcloud CLI'
 #        run: 'gcloud info'
       - name: Create key
-        run: echo "${{secrets.GOOGLE_CREDENTIALS }}" > gcp.json
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: '${{ secrets.GOOGLE_CREDENTIALS }}'
+        run: echo $GOOGLE_APPLICATION_CREDENTIALS > gcp.json
       - name: Run tests
         env:
           GOOGLE_CLOUD_PROJECT: 'ssn-public-dev'
-          GOOGLE_APPLICATION_CREDENTIALS: '${{ github.workspace }}/gcp.json'
+          GOOGLE_APPLICATION_CREDENTIALS: 'gcp.json'
 #          GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
         run: cargo test --verbose
       - name: Cleanup
