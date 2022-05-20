@@ -17,11 +17,14 @@ use tonic::codegen::http::uri::InvalidUri;
 use tonic::transport::{Certificate, Channel, ClientTlsConfig};
 
 use crate::google::cloud::aiplatform::v1::{
-    DeleteStudyRequest, GetStudyRequest, LookupStudyRequest,
+    CreateTrialRequest, DeleteStudyRequest, DeleteTrialRequest, GetStudyRequest, GetTrialRequest,
+    LookupStudyRequest, SuggestTrialsRequest, Trial,
 };
+use crate::google::longrunning::operations_client::OperationsClient;
 use google::cloud::aiplatform::v1::vizier_service_client::VizierServiceClient;
 
 use crate::model::study;
+use crate::model::trial;
 
 mod model;
 
@@ -51,6 +54,7 @@ pub struct VizierClient {
     location: String,
     project: String,
     pub service: VizierServiceClient<GoogleAuthz<Channel>>,
+    pub operation_service: OperationsClient<GoogleAuthz<Channel>>,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -67,28 +71,47 @@ impl VizierClient {
     pub async fn new(project: String, location: String) -> Result<Self, Error> {
         let domain_name = format!("{location}-aiplatform.googleapis.com", location = location);
 
-        let tls_config = ClientTlsConfig::new()
-            .ca_certificate(Certificate::from_pem(CERTIFICATES))
-            .domain_name(&domain_name);
+        let service = {
+            let tls_config = ClientTlsConfig::new()
+                .ca_certificate(Certificate::from_pem(CERTIFICATES))
+                .domain_name(&domain_name);
 
-        let endpoint = format!("https://{endpoint}", endpoint = domain_name);
+            let endpoint = format!("https://{endpoint}", endpoint = domain_name);
 
-        let channel = Channel::from_shared(endpoint)?
-            .tls_config(tls_config)?
-            .connect()
-            .await?;
-        let channel = GoogleAuthz::new(channel).await;
+            let channel = Channel::from_shared(endpoint)?
+                .tls_config(tls_config)?
+                .connect()
+                .await?;
+            let channel = GoogleAuthz::new(channel).await;
 
-        let service = VizierServiceClient::new(channel).send_gzip().accept_gzip();
+            VizierServiceClient::new(channel).send_gzip().accept_gzip()
+        };
+
+        let operation_service = {
+            let tls_config = ClientTlsConfig::new()
+                .ca_certificate(Certificate::from_pem(CERTIFICATES))
+                .domain_name(&domain_name);
+
+            let endpoint = format!("https://{endpoint}", endpoint = domain_name);
+
+            let channel = Channel::from_shared(endpoint)?
+                .tls_config(tls_config)?
+                .connect()
+                .await?;
+            let channel = GoogleAuthz::new(channel).await;
+
+            OperationsClient::new(channel).send_gzip().accept_gzip()
+        };
 
         Ok(Self {
             project,
             location,
             service,
+            operation_service,
         })
     }
 
-    pub fn create_study_request_builder(&self) -> study::create::RequestBuilder {
+    pub fn mk_study_request_builder(&self) -> study::create::RequestBuilder {
         study::create::RequestBuilder::new(self.project.clone(), self.location.clone())
     }
 
@@ -96,12 +119,12 @@ impl VizierClient {
         study::get::RequestBuilder::new(self.project.clone(), self.location.clone(), study).build()
     }
 
-    pub fn create_delete_study_request(&self, study: String) -> DeleteStudyRequest {
+    pub fn mk_delete_study_request(&self, study: String) -> DeleteStudyRequest {
         study::delete::RequestBuilder::new(self.project.clone(), self.location.clone(), study)
             .build()
     }
 
-    pub fn create_lookup_study_request(&self, display_name: String) -> LookupStudyRequest {
+    pub fn mk_lookup_study_request(&self, display_name: String) -> LookupStudyRequest {
         study::lookup::RequestBuilder::new(
             self.project.clone(),
             self.location.clone(),
@@ -110,25 +133,208 @@ impl VizierClient {
         .build()
     }
 
-    pub fn create_list_studies_request_builder(&self) -> study::list::RequestBuilder {
+    pub fn mk_list_studies_request_builder(&self) -> study::list::RequestBuilder {
         study::list::RequestBuilder::new(self.project.clone(), self.location.clone())
+    }
+
+    pub fn mk_get_trial_request(&self, study: String, trial: String) -> GetTrialRequest {
+        trial::get::RequestBuilder::new(self.project.clone(), self.location.clone(), study, trial)
+            .build()
+    }
+
+    pub fn mk_suggest_trials_request(
+        &self,
+        study: String,
+        suggestion_count: i32,
+        client_id: String,
+    ) -> SuggestTrialsRequest {
+        trial::suggest::RequestBuilder::new(
+            self.project.clone(),
+            self.location.clone(),
+            study,
+            suggestion_count,
+            client_id,
+        )
+        .build()
+    }
+
+    pub fn mk_create_trial_request(&self, study: String, trial: Trial) -> CreateTrialRequest {
+        trial::create::RequestBuilder::new(
+            self.project.clone(),
+            self.location.clone(),
+            study,
+            trial,
+        )
+        .build()
+    }
+
+    pub fn mk_delete_trial_request(&self, study: String, trial: String) -> DeleteTrialRequest {
+        trial::delete::RequestBuilder::new(
+            self.project.clone(),
+            self.location.clone(),
+            study,
+            trial,
+        )
+        .build()
+    }
+
+    pub fn mk_list_trials_request_builder(&self, study: String) -> trial::list::RequestBuilder {
+        trial::list::RequestBuilder::new(self.project.clone(), self.location.clone(), study)
     }
 }
 
 #[cfg(test)]
-mod common {
-    use crate::VizierClient;
-    use std::env;
+mod trials {
+    use super::common::test_client;
+    use crate::google::longrunning::WaitOperationRequest;
+    use tonic::Code;
 
-    pub(crate) async fn test_client() -> VizierClient {
-        let project = env::var("GOOGLE_CLOUD_PROJECT").unwrap();
+    #[tokio::test]
+    async fn it_can_get_a_trial() {
+        let mut client = test_client().await;
 
-        let location = "us-central1".to_string();
+        let study = "53316451264".to_string();
+        let trial = "1".to_string();
 
-        VizierClient::new(project.clone(), location.clone())
-            .await
-            .unwrap()
+        let request = client.mk_get_trial_request(study, trial);
+
+        let trial = client.service.get_trial(request).await.unwrap();
+        let trial = trial.get_ref();
+        dbg!(trial);
     }
+
+    #[tokio::test]
+    async fn it_deletes_a_trial() {
+        let mut client = test_client().await;
+
+        let study = "53316451264".to_string();
+        let trial = "2".to_string();
+
+        let request = client.mk_delete_trial_request(study, trial);
+
+        match client.service.delete_trial(request).await {
+            Ok(study) => {
+                let study = study.get_ref();
+                dbg!(study);
+            }
+            Err(err) => {
+                // dbg!(&err);
+                assert_eq!(err.code(), Code::InvalidArgument);
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn it_suggests_trials() {
+        let mut client = test_client().await;
+
+        let study = "53316451264".to_string();
+        let client_id = "it_can_suggest_trials".to_string();
+
+        let request = client.mk_suggest_trials_request(study, 2, client_id);
+
+        let resp = client.service.suggest_trials(request).await.unwrap();
+        let mut operation = resp.into_inner();
+
+        while !operation.done {
+            let resp = client
+                .operation_service
+                .wait_operation(WaitOperationRequest {
+                    name: operation.name.clone(),
+                    timeout: Some(std::time::Duration::from_secs(10).into()),
+                })
+                .await
+                .unwrap();
+
+            operation = resp.into_inner();
+        }
+        dbg!(operation.result.unwrap());
+    }
+
+    // FUTURE(ssoudan) add a test for create_trial
+    // #[tokio::test]
+    // async fn it_can_create_a_trial() {
+    //     let mut client = test_client().await;
+    //
+    //     let study = "53316451264".to_string();
+    //
+    //     let client_id = "it_can_create_a_trial".to_string();
+    //     let parameters = vec![
+    //         trial::Parameter {
+    //             parameter_id: "a".to_string(),
+    //             value: Some(Value {
+    //                 kind: Some(Kind::NumberValue(2.0)),
+    //             }),
+    //         },
+    //         trial::Parameter {
+    //             parameter_id: "b".to_string(),
+    //             value: Some(Value {
+    //                 kind: Some(Kind::NumberValue(9.0)),
+    //             }),
+    //         },
+    //     ];
+    //     let trial = Trial {
+    //         parameters,
+    //         client_id,
+    //         state: trial::State::Active as i32,
+    //         ..Default::default()
+    //     };
+    //
+    //     let request = client.mk_create_trials_request(study, trial);
+    //
+    //     let trial = client.service.create_trial(request).await.unwrap();
+    //     let trial = trial.get_ref();
+    //     dbg!(trial);
+    // }
+
+    #[tokio::test]
+    async fn it_lists_trials() {
+        let mut client = test_client().await;
+
+        let study = "53316451264".to_string();
+
+        // let request = client.mk_get_trial_request(study, trial);
+        let request = client
+            .mk_list_trials_request_builder(study.clone())
+            .with_page_size(2)
+            .build();
+
+        let trials = client.service.list_trials(request).await.unwrap();
+        let trial_list = &trials.get_ref().trials;
+        for t in trial_list {
+            dbg!(&t);
+        }
+
+        // TODO(ssoudan) look at generators and iterators
+
+        if !trials.get_ref().next_page_token.is_empty() {
+            let mut page_token = trials.get_ref().next_page_token.clone();
+
+            while !page_token.is_empty() {
+                println!("There is more! - {:?}", &page_token);
+
+                let request = client
+                    .mk_list_trials_request_builder(study.clone())
+                    .with_page_token(page_token)
+                    .with_page_size(2)
+                    .build();
+
+                let trials = client.service.list_trials(request).await.unwrap();
+                let trial_list = &trials.get_ref().trials;
+                for t in trial_list {
+                    dbg!(&t);
+                }
+
+                page_token = trials.get_ref().next_page_token.clone();
+            }
+        }
+    }
+
+    // TODO(ssoudan) add_trial_measurement
+    // TODO(ssoudan) complete_trial
+    // TODO(ssoudan) check_trial_early_stopping_state
+    // TODO(ssoudan) stop_trial
+    // TODO(ssoudan) list_optimal_trials
 }
 
 #[cfg(test)]
@@ -150,7 +356,7 @@ mod studies {
         let mut client = test_client().await;
 
         let request = client
-            .create_list_studies_request_builder()
+            .mk_list_studies_request_builder()
             .with_page_size(2)
             .build();
 
@@ -169,7 +375,7 @@ mod studies {
                 println!("There is more! - {:?}", &page_token);
 
                 let request = client
-                    .create_list_studies_request_builder()
+                    .mk_list_studies_request_builder()
                     .with_page_token(page_token)
                     .with_page_size(2)
                     .build();
@@ -228,7 +434,7 @@ mod studies {
         };
 
         let request = client
-            .create_study_request_builder()
+            .mk_study_request_builder()
             .with_display_name("blah".to_string())
             .with_study_spec(study_spec)
             .build()
@@ -264,7 +470,7 @@ mod studies {
 
         let display_name = "blah".to_string();
 
-        let request = client.create_lookup_study_request(display_name);
+        let request = client.mk_lookup_study_request(display_name);
 
         let study = client.service.lookup_study(request).await.unwrap();
         let study = study.get_ref();
@@ -277,7 +483,7 @@ mod studies {
 
         let study = "53316451265".to_string();
 
-        let request = client.create_delete_study_request(study);
+        let request = client.mk_delete_study_request(study);
 
         match client.service.delete_study(request).await {
             Ok(study) => {
@@ -288,5 +494,21 @@ mod studies {
                 assert_eq!(err.code(), Code::NotFound);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod common {
+    use crate::VizierClient;
+    use std::env;
+
+    pub(crate) async fn test_client() -> VizierClient {
+        let project = env::var("GOOGLE_CLOUD_PROJECT").unwrap();
+
+        let location = "us-central1".to_string();
+
+        VizierClient::new(project.clone(), location.clone())
+            .await
+            .unwrap()
     }
 }
