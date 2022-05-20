@@ -14,7 +14,7 @@ prost = "0.10.0"
 prost-types = "0.10.0"
 tokio = "1.18.2"
 thiserror = "1.0.31"
-gouth = "0.1.0"
+google-authz = {version = "1.0.0-alpha.4", features = ["tonic"]}
 regex = "1.5.5"
 
 [build-dependencies]

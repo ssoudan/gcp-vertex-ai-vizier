@@ -12,16 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use google_authz::GoogleAuthz;
 use tonic::codegen::http::uri::InvalidUri;
 use tonic::transport::{Certificate, Channel, ClientTlsConfig};
 
-use auth::AuthInterceptor;
 use google::cloud::aiplatform::v1::vizier_service_client::VizierServiceClient;
 use model::study::CreateStudyRequestBuilder;
 
 use crate::model::study::ListStudiesRequestBuilder;
 
-mod auth;
 mod model;
 
 pub mod google {
@@ -49,13 +48,11 @@ pub mod google {
 pub struct VizierClient {
     location: String,
     project: String,
-    pub service: VizierServiceClient<tonic::codegen::InterceptedService<Channel, AuthInterceptor>>,
+    pub service: VizierServiceClient<GoogleAuthz<Channel>>,
 }
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
-    #[error("{0}")]
-    Auth(#[from] auth::Error),
     #[error("tonic transport error - {0}")]
     Tonic(#[from] tonic::transport::Error),
     #[error("{0}")]
@@ -66,22 +63,21 @@ const CERTIFICATES: &str = include_str!("../certs/roots.pem");
 
 impl VizierClient {
     pub async fn new(project: String, location: String) -> Result<Self, Error> {
-        let endpoint = format!("{location}-aiplatform.googleapis.com");
+        let domain_name = format!("{location}-aiplatform.googleapis.com", location = location);
 
         let tls_config = ClientTlsConfig::new()
             .ca_certificate(Certificate::from_pem(CERTIFICATES))
-            .domain_name(&endpoint);
+            .domain_name(&domain_name);
 
-        let endpoint = format!("https://{endpoint}", endpoint = endpoint);
+        let endpoint = format!("https://{endpoint}", endpoint = domain_name);
+
         let channel = Channel::from_shared(endpoint)?
             .tls_config(tls_config)?
             .connect()
             .await?;
+        let channel = GoogleAuthz::new(channel).await;
 
-        let service: VizierServiceClient<tonic::codegen::InterceptedService<Channel, _>> =
-            VizierServiceClient::with_interceptor(channel, AuthInterceptor::new()?)
-                .send_gzip()
-                .accept_gzip();
+        let service = VizierServiceClient::new(channel); // .send_gzip().accept_gzip();
 
         Ok(Self {
             project,
@@ -101,7 +97,6 @@ impl VizierClient {
 
 #[cfg(test)]
 mod tests {
-    use gouth::Token;
     use std::env;
 
     use crate::google::cloud::aiplatform::v1::study_spec::metric_spec::GoalType;
@@ -113,34 +108,9 @@ mod tests {
     };
     use crate::google::cloud::aiplatform::v1::StudySpec;
 
-    const DEFAULT_PROJECT_ID: &str = "ssn-public-dev";
-
-    #[test]
-    fn gac_is_set_or_gouth_works() {
-        let token = Token::new();
-        match token {
-            Ok(token) => match token.header_value() {
-                Ok(header) => {
-                    println!("{}", header.as_ref());
-                }
-                Err(err) => {
-                    println!("{}", err);
-                    let gac = env::var("GOOGLE_APPLICATION_CREDENTIALS").unwrap();
-                    dbg!(&gac);
-                }
-            },
-            Err(err) => {
-                println!("{}", err);
-                let gac = env::var("GOOGLE_APPLICATION_CREDENTIALS").unwrap();
-                dbg!(&gac);
-            }
-        }
-    }
-
     #[tokio::test]
     async fn it_list_studies() {
-        let project =
-            env::var("VIZIER_GOOGLE_PROJECT_ID").unwrap_or(DEFAULT_PROJECT_ID.to_string());
+        let project = env::var("GOOGLE_CLOUD_PROJECT").unwrap();
 
         let location = "us-central1".to_string();
 
@@ -158,9 +128,9 @@ mod tests {
         for t in study_list {
             dbg!(&t.display_name);
         }
-        //
-        // // TODO(ssoudan) look at generators and iterators
-        //
+
+        // TODO(ssoudan) look at generators and iterators
+
         if !studies.get_ref().next_page_token.is_empty() {
             let mut token = studies.get_ref().next_page_token.clone();
 
@@ -186,8 +156,7 @@ mod tests {
 
     #[tokio::test]
     async fn it_creates_studies() {
-        let project =
-            env::var("VIZIER_GOOGLE_PROJECT_ID").unwrap_or(DEFAULT_PROJECT_ID.to_string());
+        let project = env::var("GOOGLE_CLOUD_PROJECT").unwrap();
 
         let location = "us-central1".to_string();
 
