@@ -5,6 +5,13 @@ edition = "2021"
 license = "Apache-2.0"
 authors = ["Sebastien Soudan <sebastien.soudan@gmail.com>"]
 
+[[example]]
+name = "simple"
+path = "examples/simple.rs"
+
+[dev-dependencies]
+tokio = { version = "1.18.2", features = ["macros", "rt-multi-thread"] }
+
 [lib]
 doctest = false
 
