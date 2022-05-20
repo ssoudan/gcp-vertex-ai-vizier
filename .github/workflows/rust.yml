@@ -29,7 +29,6 @@ jobs:
           workload_identity_provider: 'projects/38828066182/locations/global/workloadIdentityPools/gh-pool/providers/gh-provider'
           service_account: 'github-action@ssn-public-dev.iam.gserviceaccount.com'
 #          create_credentials_file: true
-          export_default_credentials: true
           id_token_include_email: true
 #          export_environment_variables: true
           cleanup_credentials: true
@@ -38,7 +37,7 @@ jobs:
       - name: Run tests
         env:
           GOOGLE_CLOUD_PROJECT: 'ssn-public-dev'
-          GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
+#          GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
         run: cargo test --verbose
 
   clippy_check:
