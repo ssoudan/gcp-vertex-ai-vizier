@@ -26,10 +26,11 @@ jobs:
         name: 'Authenticate to Google Cloud'
         uses: 'google-github-actions/auth@v0'
         with:
-          workload_identity_provider: 'projects/38828066182/locations/global/workloadIdentityPools/gh-pool/providers/gh-provider'
-          service_account: 'github-action@ssn-public-dev.iam.gserviceaccount.com'
+          credentials_json: '${{ secrets.GOOGLE_CREDENTIALS }}'
+#          workload_identity_provider: 'projects/38828066182/locations/global/workloadIdentityPools/gh-pool/providers/gh-provider'
+#          service_account: 'github-action@ssn-public-dev.iam.gserviceaccount.com'
 #          create_credentials_file: true
-          id_token_include_email: true
+#          id_token_include_email: true
 #          export_environment_variables: true
           cleanup_credentials: true
       - name: 'Set up Cloud SDK'
