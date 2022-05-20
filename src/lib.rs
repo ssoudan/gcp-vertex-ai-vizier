@@ -12,19 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+extern crate core;
+
 use google_authz::GoogleAuthz;
 use tonic::codegen::http::uri::InvalidUri;
 use tonic::transport::{Certificate, Channel, ClientTlsConfig};
 
 use crate::google::cloud::aiplatform::v1::{
+    AddTrialMeasurementRequest, CheckTrialEarlyStoppingStateRequest, CompleteTrialRequest,
     CreateTrialRequest, DeleteStudyRequest, DeleteTrialRequest, GetStudyRequest, GetTrialRequest,
-    LookupStudyRequest, SuggestTrialsRequest, Trial,
+    ListOptimalTrialsRequest, LookupStudyRequest, Measurement, StopTrialRequest,
+    SuggestTrialsRequest, Trial,
 };
 use crate::google::longrunning::operations_client::OperationsClient;
 use google::cloud::aiplatform::v1::vizier_service_client::VizierServiceClient;
 
 use crate::model::study;
 use crate::model::trial;
+use crate::trial::complete::FinalMeasurementOrReason;
+use crate::trial::{early_stopping, optimal, stop};
 
 mod model;
 
@@ -181,12 +187,73 @@ impl VizierClient {
     pub fn mk_list_trials_request_builder(&self, study: String) -> trial::list::RequestBuilder {
         trial::list::RequestBuilder::new(self.project.clone(), self.location.clone(), study)
     }
+
+    pub fn mk_add_trial_measurement_request(
+        &self,
+        study: String,
+        trial: String,
+        measurement: Measurement,
+    ) -> AddTrialMeasurementRequest {
+        trial::add_measurement::RequestBuilder::new(
+            self.project.clone(),
+            self.location.clone(),
+            study,
+            trial,
+            measurement,
+        )
+        .build()
+    }
+
+    pub fn mk_complete_trial_request(
+        &self,
+        study: String,
+        trial: String,
+        final_measurement: FinalMeasurementOrReason,
+    ) -> CompleteTrialRequest {
+        trial::complete::RequestBuilder::new(
+            self.project.clone(),
+            self.location.clone(),
+            study,
+            trial,
+            final_measurement,
+        )
+        .build()
+    }
+
+    pub fn mk_check_trial_early_stopping_state_request(
+        &self,
+        study: String,
+        trial: String,
+    ) -> CheckTrialEarlyStoppingStateRequest {
+        early_stopping::RequestBuilder::new(
+            self.project.clone(),
+            self.location.clone(),
+            study,
+            trial,
+        )
+        .build()
+    }
+
+    pub fn mk_stop_trial_request(&self, study: String, trial: String) -> StopTrialRequest {
+        stop::RequestBuilder::new(self.project.clone(), self.location.clone(), study, trial).build()
+    }
+
+    pub fn mk_list_optimal_trials_request(&self, study: String) -> ListOptimalTrialsRequest {
+        optimal::RequestBuilder::new(self.project.clone(), self.location.clone(), study).build()
+    }
 }
 
 #[cfg(test)]
 mod trials {
     use super::common::test_client;
+    use crate::google::cloud::aiplatform::v1::{
+        measurement, CheckTrialEarlyStoppingStateResponse, Measurement,
+    };
+    use crate::google::longrunning::operation::Result::{Error, Response};
     use crate::google::longrunning::WaitOperationRequest;
+    use crate::trial::complete::FinalMeasurementOrReason;
+
+    use prost::Message;
     use tonic::Code;
 
     #[tokio::test]
@@ -330,11 +397,138 @@ mod trials {
         }
     }
 
-    // TODO(ssoudan) add_trial_measurement
-    // TODO(ssoudan) complete_trial
-    // TODO(ssoudan) check_trial_early_stopping_state
-    // TODO(ssoudan) stop_trial
-    // TODO(ssoudan) list_optimal_trials
+    #[tokio::test]
+    async fn it_can_add_trial_measurement() {
+        let mut client = test_client().await;
+
+        let study = "53316451264".to_string();
+        let trial = "1".to_string();
+
+        let measurement = Measurement {
+            elapsed_duration: Some(std::time::Duration::from_secs(10).into()),
+            step_count: 13,
+            metrics: vec![measurement::Metric {
+                metric_id: "m1".to_string(),
+                value: 2.1,
+            }],
+        };
+
+        let request = client.mk_add_trial_measurement_request(study, trial, measurement);
+
+        let trial = client.service.add_trial_measurement(request).await.unwrap();
+        let trial = trial.get_ref();
+        dbg!(trial);
+    }
+
+    #[tokio::test]
+    async fn it_can_complete_a_trial() {
+        let mut client = test_client().await;
+
+        let study = "53316451264".to_string();
+        let trial = "3".to_string();
+
+        let final_measurement_or_reason = FinalMeasurementOrReason::FinalMeasurement(Measurement {
+            elapsed_duration: Some(std::time::Duration::from_secs(100).into()),
+            step_count: 14,
+            metrics: vec![measurement::Metric {
+                metric_id: "m1".to_string(),
+                value: 3.1,
+            }],
+        });
+
+        let request = client.mk_complete_trial_request(study, trial, final_measurement_or_reason);
+
+        match client.service.complete_trial(request).await {
+            Ok(trial) => {
+                let trial = trial.get_ref();
+                dbg!(trial);
+            }
+            Err(e) => {
+                dbg!(e);
+            }
+        };
+    }
+
+    #[tokio::test]
+    async fn it_can_check_trial_early_stopping_state() {
+        let mut client = test_client().await;
+
+        let study = "53316451264".to_string();
+        let trial = "3".to_string();
+
+        let request = client.mk_check_trial_early_stopping_state_request(study, trial);
+
+        let resp = client
+            .service
+            .check_trial_early_stopping_state(request)
+            .await
+            .unwrap();
+
+        let mut operation = resp.into_inner();
+
+        while !operation.done {
+            let resp = client
+                .operation_service
+                .wait_operation(WaitOperationRequest {
+                    name: operation.name.clone(),
+                    timeout: Some(std::time::Duration::from_secs(10).into()),
+                })
+                .await
+                .unwrap();
+
+            operation = resp.into_inner();
+        }
+
+        match operation.result.unwrap() {
+            Error(err) => {
+                dbg!(err);
+            }
+            Response(resp) => {
+                match resp.type_url.as_str() {
+                    "type.googleapis.com/google.cloud.aiplatform.v1.CheckTrialEarlyStoppingStateResponse" => {
+                        let resp : CheckTrialEarlyStoppingStateResponse = CheckTrialEarlyStoppingStateResponse::decode(&resp.value[..]).unwrap();
+                        dbg!(resp);
+                    }
+                    t => {panic!("unexpected type {}", t)}
+                }
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn it_can_stop_a_trial() {
+        let mut client = test_client().await;
+
+        let study = "53316451264".to_string();
+        let trial = "3".to_string();
+
+        let request = client.mk_stop_trial_request(study, trial);
+
+        match client.service.stop_trial(request).await {
+            Ok(trial) => {
+                let trial = trial.get_ref();
+                dbg!(trial);
+            }
+            Err(err) => {
+                dbg!(err);
+            }
+        };
+    }
+
+    #[tokio::test]
+    async fn it_lists_optimal_trials() {
+        let mut client = test_client().await;
+
+        let study = "53316451264".to_string();
+
+        let request = client.mk_list_optimal_trials_request(study.clone());
+
+        let trials = client.service.list_optimal_trials(request).await.unwrap();
+        let trial_list = &trials.get_ref().optimal_trials;
+        for t in trial_list {
+            dbg!(&t.name);
+        }
+    }
 }
 
 #[cfg(test)]
