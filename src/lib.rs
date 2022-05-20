@@ -101,6 +101,7 @@ impl VizierClient {
 
 #[cfg(test)]
 mod tests {
+    use gouth::Token;
     use std::env;
 
     use crate::google::cloud::aiplatform::v1::study_spec::metric_spec::GoalType;
@@ -113,6 +114,28 @@ mod tests {
     use crate::google::cloud::aiplatform::v1::StudySpec;
 
     const DEFAULT_PROJECT_ID: &str = "ssn-public-dev";
+
+    #[test]
+    fn gac_is_set_or_gouth_works() {
+        let token = Token::new();
+        match token {
+            Ok(token) => match token.header_value() {
+                Ok(header) => {
+                    println!("{}", header.as_ref());
+                }
+                Err(err) => {
+                    println!("{}", err);
+                    let gac = env::var("GOOGLE_APPLICATION_CREDENTIALS").unwrap();
+                    dbg!(&gac);
+                }
+            },
+            Err(err) => {
+                println!("{}", err);
+                let gac = env::var("GOOGLE_APPLICATION_CREDENTIALS").unwrap();
+                dbg!(&gac);
+            }
+        }
+    }
 
     #[tokio::test]
     async fn it_list_studies() {
