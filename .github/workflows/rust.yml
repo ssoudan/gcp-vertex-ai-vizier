@@ -28,9 +28,10 @@ jobs:
         with:
           workload_identity_provider: 'projects/38828066182/locations/global/workloadIdentityPools/gh-pool/providers/gh-provider'
           service_account: 'github-action@ssn-public-dev.iam.gserviceaccount.com'
-          create_credentials_file: true
+#          create_credentials_file: true
+          export_default_credentials: true
           id_token_include_email: true
-          export_environment_variables: true
+#          export_environment_variables: true
           cleanup_credentials: true
       - name: 'Set up Cloud SDK'
         uses: 'google-github-actions/setup-gcloud@v0'
