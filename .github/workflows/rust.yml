@@ -35,6 +35,9 @@ jobs:
       - name: 'Set up Cloud SDK'
         uses: 'google-github-actions/setup-gcloud@v0'
       - name: Run tests
+        env:
+          GOOGLE_CLOUD_PROJECT: 'ssn-public-dev'
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
         run: cargo test --verbose
 
   clippy_check:
