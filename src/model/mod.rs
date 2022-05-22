@@ -13,4 +13,4 @@
 // limitations under the License.
 
 pub mod study;
-pub(crate) mod trial;
+pub mod trial;

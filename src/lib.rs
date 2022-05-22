@@ -16,6 +16,7 @@ extern crate core;
 
 use google_authz::GoogleAuthz;
 use std::time::Duration;
+use tokio::time::sleep;
 use tonic::codegen::http::uri::InvalidUri;
 use tonic::transport::{Certificate, Channel, ClientTlsConfig};
 
@@ -26,7 +27,7 @@ use crate::google::cloud::aiplatform::v1::{
     SuggestTrialsRequest, Trial,
 };
 use crate::google::longrunning::operations_client::OperationsClient;
-use crate::google::longrunning::{operation, Operation, WaitOperationRequest};
+use crate::google::longrunning::{operation, GetOperationRequest, Operation, WaitOperationRequest};
 use google::cloud::aiplatform::v1::vizier_service_client::VizierServiceClient;
 
 use crate::model::study;
@@ -36,6 +37,7 @@ use crate::trial::complete::FinalMeasurementOrReason;
 use crate::trial::{early_stopping, optimal, stop, TrialName};
 
 pub mod model;
+pub mod util;
 
 pub mod google {
     pub mod api {
@@ -233,6 +235,7 @@ impl VizierClient {
         timeout: Option<Duration>,
     ) -> Option<operation::Result> {
         while !operation.done {
+            sleep(Duration::from_millis(500)).await;
             let resp = self
                 .operation_service
                 .wait_operation(WaitOperationRequest {
@@ -243,9 +246,29 @@ impl VizierClient {
                 .unwrap(); // TODO(ssoudan) handle errors
 
             operation = resp.into_inner();
+            dbg!(&operation);
         }
 
         operation.result
+    }
+
+    pub async fn get_operation(&mut self, operation_name: String) -> Option<operation::Result> {
+        let resp = self
+            .operation_service
+            .get_operation(GetOperationRequest {
+                name: operation_name,
+            })
+            .await
+            .unwrap(); // TODO(ssoudan) handle errors
+
+        let operation = resp.into_inner();
+        dbg!(&operation);
+
+        if operation.done {
+            operation.result
+        } else {
+            None
+        }
     }
 }
 
@@ -255,10 +278,8 @@ mod trials {
     use crate::google::cloud::aiplatform::v1::{
         measurement, CheckTrialEarlyStoppingStateResponse, Measurement,
     };
-    use crate::google::longrunning::operation::Result::{Error, Response};
     use crate::trial::complete::FinalMeasurementOrReason;
-
-    use prost::Message;
+    use crate::util::decode_operation_result_as;
     use std::time::Duration;
     use tonic::Code;
 
@@ -489,20 +510,13 @@ mod trials {
             .wait_for_operation(operation, Some(Duration::from_secs(4)))
             .await;
 
-        match result.unwrap() {
-            Error(err) => {
-                dbg!(err);
-            }
-            Response(resp) => {
-                match resp.type_url.as_str() {
-                    "type.googleapis.com/google.cloud.aiplatform.v1.CheckTrialEarlyStoppingStateResponse" => {
-                        let resp : CheckTrialEarlyStoppingStateResponse = CheckTrialEarlyStoppingStateResponse::decode(&resp.value[..]).unwrap();
-                        dbg!(resp);
-                    }
-                    t => {panic!("unexpected type {}", t)}
-                }
-            }
-        }
+        let resp: CheckTrialEarlyStoppingStateResponse = decode_operation_result_as(
+            result.unwrap(),
+            "type.googleapis.com/google.cloud.aiplatform.v1.CheckTrialEarlyStoppingStateResponse",
+        )
+        .unwrap();
+
+        dbg!(resp);
     }
 
     #[tokio::test]

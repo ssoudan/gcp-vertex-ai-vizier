@@ -19,11 +19,19 @@ use gcp_vertex_ai_vizier::google::cloud::aiplatform::v1::study_spec::parameter_s
 use gcp_vertex_ai_vizier::google::cloud::aiplatform::v1::study_spec::{
     Algorithm, MeasurementSelectionType, MetricSpec, ObservationNoise, ParameterSpec,
 };
-use gcp_vertex_ai_vizier::google::cloud::aiplatform::v1::StudySpec;
+use gcp_vertex_ai_vizier::google::cloud::aiplatform::v1::{
+    measurement, Measurement, StudySpec, SuggestTrialsMetadata, SuggestTrialsResponse, Trial,
+};
 use gcp_vertex_ai_vizier::model::study::ToStudyName;
-use gcp_vertex_ai_vizier::VizierClient;
+use gcp_vertex_ai_vizier::model::trial::complete::FinalMeasurementOrReason;
+use gcp_vertex_ai_vizier::model::trial::ToTrialName;
+use gcp_vertex_ai_vizier::{util, VizierClient};
+use prost::Message;
+use prost_types::value::Kind;
+use std::collections::HashMap;
 use std::env;
-use std::time::Duration;
+use std::thread::sleep;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Hammelblau's function
 fn f(x: f64, y: f64) -> f64 {
@@ -73,9 +81,15 @@ async fn main() {
         automated_stopping_spec: None,
     };
 
+    let epoch = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("Time went backwards")
+        .as_secs();
+
+    let display_name = format!("test_hammelblau_{}", epoch);
     let request = client
         .mk_study_request_builder()
-        .with_display_name("test_hammelblau".to_string())
+        .with_display_name(display_name)
         .with_study_spec(study_spec)
         .build()
         .unwrap();
@@ -87,25 +101,112 @@ async fn main() {
 
             let study_name = study.to_study_name();
 
-            let req =
-                client.mk_suggest_trials_request(study_name, 5, "test_hammelblau".to_string());
+            for _ in 0..4 {
+                let req = client.mk_suggest_trials_request(
+                    study_name.clone(),
+                    5,
+                    "test_hammelblau_1".to_string(),
+                );
 
-            let trials = client.service.suggest_trials(req).await.unwrap();
-            let operation = trials.into_inner();
+                let trials = client.service.suggest_trials(req).await.unwrap();
+                let operation = trials.into_inner();
 
-            let result = client
-                .wait_for_operation(operation, Some(Duration::from_secs(4)))
-                .await;
+                dbg!(&operation);
 
-            dbg!(result);
-            // TODO(ssoudan) parse result into trials
+                let metadata = operation.metadata.as_ref().unwrap();
+                let metadata: SuggestTrialsMetadata =
+                    SuggestTrialsMetadata::decode(&metadata.value[..]).unwrap();
+                dbg!(&metadata);
+
+                let result = loop {
+                    sleep(std::time::Duration::from_secs(1));
+                    let result = client.get_operation(operation.name.clone()).await;
+                    dbg!(&result);
+                    if result.is_some() {
+                        break result.unwrap();
+                    }
+                };
+
+                // parse the result into trials
+                let resp: SuggestTrialsResponse = util::decode_operation_result_as(
+                    result,
+                    "type.googleapis.com/google.cloud.aiplatform.v1.SuggestTrialsResponse",
+                )
+                .unwrap();
+
+                for trial in resp.trials.iter() {
+                    dbg!(&trial);
+
+                    let parameters = extract_parameters(trial);
+                    dbg!(&parameters);
+
+                    let start = SystemTime::now();
+
+                    let x = parameters["x"].clone();
+                    let y = parameters["y"].clone();
+
+                    let value = f(x, y);
+
+                    let elapsed_duration = start.elapsed().unwrap();
+                    dbg!(&value);
+
+                    let final_measurement_or_reason =
+                        FinalMeasurementOrReason::FinalMeasurement(Measurement {
+                            elapsed_duration: Some(elapsed_duration.into()),
+                            step_count: 14,
+                            metrics: vec![measurement::Metric {
+                                metric_id: "m".to_string(),
+                                value,
+                            }],
+                        });
+
+                    let request = client.mk_complete_trial_request(
+                        trial.to_trial_name(),
+                        final_measurement_or_reason,
+                    );
+
+                    match client.service.complete_trial(request).await {
+                        Ok(trial) => {
+                            let trial = trial.get_ref();
+                            dbg!(trial);
+                        }
+                        Err(e) => {
+                            dbg!(e);
+                        }
+                    };
+                }
+            }
 
             // TODO(ssoudan) get suggested trials
             // TODO(ssoudan) run the trials
-            // TODO(ssoudan) get the best trials
+
+            // get the best trials
+            let request = client.mk_list_optimal_trials_request(study_name.clone());
+
+            let resp = client.service.list_optimal_trials(request).await.unwrap();
+            let optimal_trials = &resp.get_ref().optimal_trials;
+            for t in optimal_trials {
+                dbg!(&t.name);
+                dbg!(&t.final_measurement.as_ref().map(|x| x.metrics.clone()));
+                let parameters = extract_parameters(t);
+                dbg!(&parameters);
+            }
         }
         Err(e) => {
             panic!("{}", e);
         }
     }
+}
+
+fn extract_parameters(trial: &Trial) -> HashMap<String, f64> {
+    let mut parameters = HashMap::new();
+    for p in trial.parameters.iter() {
+        let p_id = p.parameter_id.clone();
+        if let Some(p) = &p.value {
+            if let Some(Kind::NumberValue(v)) = p.kind {
+                parameters.insert(p_id, v);
+            }
+        }
+    }
+    parameters
 }
