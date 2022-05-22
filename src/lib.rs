@@ -15,6 +15,7 @@
 extern crate core;
 
 use google_authz::GoogleAuthz;
+use std::time::Duration;
 use tonic::codegen::http::uri::InvalidUri;
 use tonic::transport::{Certificate, Channel, ClientTlsConfig};
 
@@ -25,14 +26,16 @@ use crate::google::cloud::aiplatform::v1::{
     SuggestTrialsRequest, Trial,
 };
 use crate::google::longrunning::operations_client::OperationsClient;
+use crate::google::longrunning::{operation, Operation, WaitOperationRequest};
 use google::cloud::aiplatform::v1::vizier_service_client::VizierServiceClient;
 
 use crate::model::study;
 use crate::model::trial;
+use crate::study::StudyName;
 use crate::trial::complete::FinalMeasurementOrReason;
-use crate::trial::{early_stopping, optimal, stop};
+use crate::trial::{early_stopping, optimal, stop, TrialName};
 
-mod model;
+pub mod model;
 
 pub mod google {
     pub mod api {
@@ -121,13 +124,12 @@ impl VizierClient {
         study::create::RequestBuilder::new(self.project.clone(), self.location.clone())
     }
 
-    pub fn create_get_study_request(&self, study: String) -> GetStudyRequest {
-        study::get::RequestBuilder::new(self.project.clone(), self.location.clone(), study).build()
+    pub fn mk_get_study_request(&self, study_name: StudyName) -> GetStudyRequest {
+        study::get::RequestBuilder::new(study_name).build()
     }
 
-    pub fn mk_delete_study_request(&self, study: String) -> DeleteStudyRequest {
-        study::delete::RequestBuilder::new(self.project.clone(), self.location.clone(), study)
-            .build()
+    pub fn mk_delete_study_request(&self, study_name: StudyName) -> DeleteStudyRequest {
+        study::delete::RequestBuilder::new(study_name).build()
     }
 
     pub fn mk_lookup_study_request(&self, display_name: String) -> LookupStudyRequest {
@@ -143,103 +145,107 @@ impl VizierClient {
         study::list::RequestBuilder::new(self.project.clone(), self.location.clone())
     }
 
-    pub fn mk_get_trial_request(&self, study: String, trial: String) -> GetTrialRequest {
-        trial::get::RequestBuilder::new(self.project.clone(), self.location.clone(), study, trial)
-            .build()
+    pub fn mk_get_trial_request(&self, trial_name: TrialName) -> GetTrialRequest {
+        trial::get::RequestBuilder::new(trial_name).build()
     }
 
     pub fn mk_suggest_trials_request(
         &self,
-        study: String,
+        study_name: StudyName,
         suggestion_count: i32,
         client_id: String,
     ) -> SuggestTrialsRequest {
-        trial::suggest::RequestBuilder::new(
-            self.project.clone(),
-            self.location.clone(),
-            study,
-            suggestion_count,
-            client_id,
-        )
-        .build()
+        trial::suggest::RequestBuilder::new(study_name, suggestion_count, client_id).build()
     }
 
-    pub fn mk_create_trial_request(&self, study: String, trial: Trial) -> CreateTrialRequest {
-        trial::create::RequestBuilder::new(
-            self.project.clone(),
-            self.location.clone(),
-            study,
-            trial,
-        )
-        .build()
+    pub fn mk_create_trial_request(
+        &self,
+        study_name: StudyName,
+        trial: Trial,
+    ) -> CreateTrialRequest {
+        trial::create::RequestBuilder::new(study_name, trial).build()
     }
 
-    pub fn mk_delete_trial_request(&self, study: String, trial: String) -> DeleteTrialRequest {
-        trial::delete::RequestBuilder::new(
-            self.project.clone(),
-            self.location.clone(),
-            study,
-            trial,
-        )
-        .build()
+    pub fn mk_delete_trial_request(&self, trial_name: TrialName) -> DeleteTrialRequest {
+        trial::delete::RequestBuilder::new(trial_name).build()
     }
 
-    pub fn mk_list_trials_request_builder(&self, study: String) -> trial::list::RequestBuilder {
-        trial::list::RequestBuilder::new(self.project.clone(), self.location.clone(), study)
+    pub fn mk_list_trials_request_builder(
+        &self,
+        study_name: StudyName,
+    ) -> trial::list::RequestBuilder {
+        trial::list::RequestBuilder::new(study_name)
     }
 
     pub fn mk_add_trial_measurement_request(
         &self,
-        study: String,
-        trial: String,
+        trial_name: TrialName,
         measurement: Measurement,
     ) -> AddTrialMeasurementRequest {
-        trial::add_measurement::RequestBuilder::new(
-            self.project.clone(),
-            self.location.clone(),
-            study,
-            trial,
-            measurement,
-        )
-        .build()
+        trial::add_measurement::RequestBuilder::new(trial_name, measurement).build()
     }
 
     pub fn mk_complete_trial_request(
         &self,
-        study: String,
-        trial: String,
+        trial_name: TrialName,
         final_measurement: FinalMeasurementOrReason,
     ) -> CompleteTrialRequest {
-        trial::complete::RequestBuilder::new(
-            self.project.clone(),
-            self.location.clone(),
-            study,
-            trial,
-            final_measurement,
-        )
-        .build()
+        trial::complete::RequestBuilder::new(trial_name, final_measurement).build()
     }
 
     pub fn mk_check_trial_early_stopping_state_request(
         &self,
-        study: String,
-        trial: String,
+        trial_name: TrialName,
     ) -> CheckTrialEarlyStoppingStateRequest {
-        early_stopping::RequestBuilder::new(
-            self.project.clone(),
-            self.location.clone(),
-            study,
-            trial,
-        )
-        .build()
+        early_stopping::RequestBuilder::new(trial_name).build()
     }
 
-    pub fn mk_stop_trial_request(&self, study: String, trial: String) -> StopTrialRequest {
-        stop::RequestBuilder::new(self.project.clone(), self.location.clone(), study, trial).build()
+    pub fn mk_stop_trial_request(&self, trial_name: TrialName) -> StopTrialRequest {
+        stop::RequestBuilder::new(trial_name).build()
     }
 
-    pub fn mk_list_optimal_trials_request(&self, study: String) -> ListOptimalTrialsRequest {
-        optimal::RequestBuilder::new(self.project.clone(), self.location.clone(), study).build()
+    pub fn mk_list_optimal_trials_request(
+        &self,
+        study_name: StudyName,
+    ) -> ListOptimalTrialsRequest {
+        optimal::RequestBuilder::new(study_name).build()
+    }
+
+    pub fn trial_name(&self, study: String, trial: String) -> TrialName {
+        TrialName::new(self.project.clone(), self.location.clone(), study, trial)
+    }
+
+    pub fn trial_name_from_study(
+        &self,
+        study_name: &StudyName,
+        trial: impl Into<String>,
+    ) -> TrialName {
+        TrialName::from_study(study_name, trial.into())
+    }
+
+    pub fn study_name(&self, study: impl Into<String>) -> StudyName {
+        StudyName::new(self.project.clone(), self.location.clone(), study.into())
+    }
+
+    pub async fn wait_for_operation(
+        &mut self,
+        mut operation: Operation,
+        timeout: Option<Duration>,
+    ) -> Option<operation::Result> {
+        while !operation.done {
+            let resp = self
+                .operation_service
+                .wait_operation(WaitOperationRequest {
+                    name: operation.name.clone(),
+                    timeout: timeout.map(|d| d.into()),
+                })
+                .await
+                .unwrap(); // TODO(ssoudan) handle errors
+
+            operation = resp.into_inner();
+        }
+
+        operation.result
     }
 }
 
@@ -250,10 +256,10 @@ mod trials {
         measurement, CheckTrialEarlyStoppingStateResponse, Measurement,
     };
     use crate::google::longrunning::operation::Result::{Error, Response};
-    use crate::google::longrunning::WaitOperationRequest;
     use crate::trial::complete::FinalMeasurementOrReason;
 
     use prost::Message;
+    use std::time::Duration;
     use tonic::Code;
 
     #[tokio::test]
@@ -263,7 +269,11 @@ mod trials {
         let study = "53316451264".to_string();
         let trial = "1".to_string();
 
-        let request = client.mk_get_trial_request(study, trial);
+        let study_name = client.study_name(study);
+        dbg!(&study_name);
+        let trial_name = client.trial_name_from_study(&study_name, trial);
+        dbg!(&trial_name);
+        let request = client.mk_get_trial_request(trial_name);
 
         let trial = client.service.get_trial(request).await.unwrap();
         let trial = trial.get_ref();
@@ -277,7 +287,10 @@ mod trials {
         let study = "53316451264".to_string();
         let trial = "2".to_string();
 
-        let request = client.mk_delete_trial_request(study, trial);
+        let study_name = client.study_name(study);
+        let trial_name = client.trial_name_from_study(&study_name, trial);
+
+        let request = client.mk_delete_trial_request(trial_name);
 
         match client.service.delete_trial(request).await {
             Ok(study) => {
@@ -296,26 +309,23 @@ mod trials {
         let mut client = test_client().await;
 
         let study = "53316451264".to_string();
+
+        let study_name = client.study_name(study);
+
         let client_id = "it_can_suggest_trials".to_string();
 
-        let request = client.mk_suggest_trials_request(study, 2, client_id);
+        let request = client.mk_suggest_trials_request(study_name, 2, client_id);
 
         let resp = client.service.suggest_trials(request).await.unwrap();
-        let mut operation = resp.into_inner();
+        let operation = resp.into_inner();
 
-        while !operation.done {
-            let resp = client
-                .operation_service
-                .wait_operation(WaitOperationRequest {
-                    name: operation.name.clone(),
-                    timeout: Some(std::time::Duration::from_secs(10).into()),
-                })
-                .await
-                .unwrap();
+        let result = client
+            .wait_for_operation(operation, Some(Duration::from_secs(4)))
+            .await
+            .unwrap();
+        dbg!(result);
 
-            operation = resp.into_inner();
-        }
-        dbg!(operation.result.unwrap());
+        // TODO(ssoudan) need to parse the result
     }
 
     // FUTURE(ssoudan) add a test for create_trial
@@ -359,10 +369,10 @@ mod trials {
         let mut client = test_client().await;
 
         let study = "53316451264".to_string();
+        let study_name = client.study_name(study);
 
-        // let request = client.mk_get_trial_request(study, trial);
         let request = client
-            .mk_list_trials_request_builder(study.clone())
+            .mk_list_trials_request_builder(study_name.clone())
             .with_page_size(2)
             .build();
 
@@ -381,7 +391,7 @@ mod trials {
                 println!("There is more! - {:?}", &page_token);
 
                 let request = client
-                    .mk_list_trials_request_builder(study.clone())
+                    .mk_list_trials_request_builder(study_name.clone())
                     .with_page_token(page_token)
                     .with_page_size(2)
                     .build();
@@ -404,6 +414,9 @@ mod trials {
         let study = "53316451264".to_string();
         let trial = "1".to_string();
 
+        let study_name = client.study_name(study);
+        let trial_name = client.trial_name_from_study(&study_name, trial);
+
         let measurement = Measurement {
             elapsed_duration: Some(std::time::Duration::from_secs(10).into()),
             step_count: 13,
@@ -413,7 +426,7 @@ mod trials {
             }],
         };
 
-        let request = client.mk_add_trial_measurement_request(study, trial, measurement);
+        let request = client.mk_add_trial_measurement_request(trial_name, measurement);
 
         let trial = client.service.add_trial_measurement(request).await.unwrap();
         let trial = trial.get_ref();
@@ -427,6 +440,9 @@ mod trials {
         let study = "53316451264".to_string();
         let trial = "3".to_string();
 
+        let study_name = client.study_name(study);
+        let trial_name = client.trial_name_from_study(&study_name, trial);
+
         let final_measurement_or_reason = FinalMeasurementOrReason::FinalMeasurement(Measurement {
             elapsed_duration: Some(std::time::Duration::from_secs(100).into()),
             step_count: 14,
@@ -436,7 +452,7 @@ mod trials {
             }],
         });
 
-        let request = client.mk_complete_trial_request(study, trial, final_measurement_or_reason);
+        let request = client.mk_complete_trial_request(trial_name, final_measurement_or_reason);
 
         match client.service.complete_trial(request).await {
             Ok(trial) => {
@@ -456,7 +472,10 @@ mod trials {
         let study = "53316451264".to_string();
         let trial = "3".to_string();
 
-        let request = client.mk_check_trial_early_stopping_state_request(study, trial);
+        let study_name = client.study_name(study);
+        let trial_name = client.trial_name_from_study(&study_name, trial);
+
+        let request = client.mk_check_trial_early_stopping_state_request(trial_name);
 
         let resp = client
             .service
@@ -464,22 +483,13 @@ mod trials {
             .await
             .unwrap();
 
-        let mut operation = resp.into_inner();
+        let operation = resp.into_inner();
 
-        while !operation.done {
-            let resp = client
-                .operation_service
-                .wait_operation(WaitOperationRequest {
-                    name: operation.name.clone(),
-                    timeout: Some(std::time::Duration::from_secs(10).into()),
-                })
-                .await
-                .unwrap();
+        let result = client
+            .wait_for_operation(operation, Some(Duration::from_secs(4)))
+            .await;
 
-            operation = resp.into_inner();
-        }
-
-        match operation.result.unwrap() {
+        match result.unwrap() {
             Error(err) => {
                 dbg!(err);
             }
@@ -502,7 +512,10 @@ mod trials {
         let study = "53316451264".to_string();
         let trial = "3".to_string();
 
-        let request = client.mk_stop_trial_request(study, trial);
+        let study_name = client.study_name(study);
+        let trial_name = client.trial_name_from_study(&study_name, trial);
+
+        let request = client.mk_stop_trial_request(trial_name);
 
         match client.service.stop_trial(request).await {
             Ok(trial) => {
@@ -521,7 +534,9 @@ mod trials {
 
         let study = "53316451264".to_string();
 
-        let request = client.mk_list_optimal_trials_request(study.clone());
+        let study_name = client.study_name(study);
+
+        let request = client.mk_list_optimal_trials_request(study_name);
 
         let trials = client.service.list_optimal_trials(request).await.unwrap();
         let trial_list = &trials.get_ref().optimal_trials;
@@ -555,8 +570,10 @@ mod studies {
             .build();
 
         let studies = client.service.list_studies(request).await.unwrap();
-        let study_list = &studies.get_ref().studies;
+        let study_list_resp = studies.get_ref();
+        let study_list = &study_list_resp.studies;
         for t in study_list {
+            dbg!(&t.name);
             dbg!(&t.display_name);
         }
 
@@ -651,7 +668,9 @@ mod studies {
 
         let study = "53316451264".to_string();
 
-        let request = client.create_get_study_request(study);
+        let study_name = client.study_name(study);
+
+        let request = client.mk_get_study_request(study_name);
 
         let study = client.service.get_study(request).await.unwrap();
         let study = study.get_ref();
@@ -676,8 +695,9 @@ mod studies {
         let mut client = test_client().await;
 
         let study = "53316451265".to_string();
+        let study_name = client.study_name(study);
 
-        let request = client.mk_delete_study_request(study);
+        let request = client.mk_delete_study_request(study_name);
 
         match client.service.delete_study(request).await {
             Ok(study) => {

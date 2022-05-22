@@ -13,42 +13,24 @@
 // limitations under the License.
 
 use crate::google::cloud::aiplatform::v1::AddTrialMeasurementRequest;
-use crate::Measurement;
+use crate::{Measurement, TrialName};
 
 pub struct RequestBuilder {
-    project: String,
-    location: String,
-    study: String,
-    trial: String,
+    trial_name: TrialName,
     measurement: Measurement,
 }
 
 impl RequestBuilder {
-    pub fn new(
-        project: String,
-        location: String,
-        study: String,
-        trial: String,
-        measurement: Measurement,
-    ) -> Self {
+    pub fn new(trial_name: TrialName, measurement: Measurement) -> Self {
         RequestBuilder {
-            project,
-            location,
-            study,
-            trial,
+            trial_name,
             measurement,
         }
     }
 
     pub fn build(self) -> AddTrialMeasurementRequest {
         AddTrialMeasurementRequest {
-            trial_name: format!(
-                "projects/{project}/locations/{location}/studies/{study}/trials/{trial}",
-                project = self.project,
-                location = self.location,
-                study = self.study,
-                trial = self.trial,
-            ),
+            trial_name: self.trial_name.into(),
             measurement: Some(self.measurement),
         }
     }

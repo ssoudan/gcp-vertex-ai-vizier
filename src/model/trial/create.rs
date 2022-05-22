@@ -13,37 +13,21 @@
 // limitations under the License.
 
 use crate::google::cloud::aiplatform::v1::CreateTrialRequest;
+use crate::StudyName;
 
 pub struct RequestBuilder {
-    project: String,
-    location: String,
-    study: String,
+    study_name: StudyName,
     trial: crate::google::cloud::aiplatform::v1::Trial,
 }
 
 impl RequestBuilder {
-    pub fn new(
-        project: String,
-        location: String,
-        study: String,
-        trial: crate::google::cloud::aiplatform::v1::Trial,
-    ) -> Self {
-        RequestBuilder {
-            project,
-            location,
-            study,
-            trial,
-        }
+    pub fn new(study_name: StudyName, trial: crate::google::cloud::aiplatform::v1::Trial) -> Self {
+        RequestBuilder { study_name, trial }
     }
 
     pub fn build(self) -> CreateTrialRequest {
         CreateTrialRequest {
-            parent: format!(
-                "projects/{project}/locations/{location}/studies/{study}",
-                project = self.project,
-                location = self.location,
-                study = self.study,
-            ),
+            parent: self.study_name.into(),
             trial: Some(self.trial),
         }
     }

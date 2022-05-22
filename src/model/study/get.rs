@@ -13,30 +13,20 @@
 // limitations under the License.
 
 use crate::google::cloud::aiplatform::v1::GetStudyRequest;
+use crate::StudyName;
 
 pub struct RequestBuilder {
-    project: String,
-    location: String,
-    study: String,
+    study_name: StudyName,
 }
 
 impl RequestBuilder {
-    pub fn new(project: String, location: String, study: String) -> Self {
-        RequestBuilder {
-            project,
-            location,
-            study,
-        }
+    pub fn new(study_name: StudyName) -> Self {
+        RequestBuilder { study_name }
     }
 
     pub fn build(self) -> GetStudyRequest {
         GetStudyRequest {
-            name: format!(
-                "projects/{project}/locations/{location}/studies/{study}",
-                project = self.project,
-                location = self.location,
-                study = self.study
-            ),
+            name: self.study_name.into(),
         }
     }
 }

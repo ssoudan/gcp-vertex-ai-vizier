@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use crate::google::cloud::aiplatform::v1::CompleteTrialRequest;
-use crate::Measurement;
+use crate::{Measurement, TrialName};
 
 pub enum FinalMeasurementOrReason {
     FinalMeasurement(Measurement),
@@ -21,26 +21,14 @@ pub enum FinalMeasurementOrReason {
 }
 
 pub struct RequestBuilder {
-    project: String,
-    location: String,
-    study: String,
-    trial: String,
+    trial_name: TrialName,
     final_measurement: FinalMeasurementOrReason,
 }
 
 impl RequestBuilder {
-    pub fn new(
-        project: String,
-        location: String,
-        study: String,
-        trial: String,
-        final_measurement: FinalMeasurementOrReason,
-    ) -> Self {
+    pub fn new(trial_name: TrialName, final_measurement: FinalMeasurementOrReason) -> Self {
         RequestBuilder {
-            project,
-            location,
-            study,
-            trial,
+            trial_name,
             final_measurement,
         }
     }
@@ -48,24 +36,12 @@ impl RequestBuilder {
     pub fn build(self) -> CompleteTrialRequest {
         match self.final_measurement {
             FinalMeasurementOrReason::FinalMeasurement(m) => CompleteTrialRequest {
-                name: format!(
-                    "projects/{project}/locations/{location}/studies/{study}/trials/{trial}",
-                    project = self.project,
-                    location = self.location,
-                    study = self.study,
-                    trial = self.trial,
-                ),
+                name: self.trial_name.into(),
                 final_measurement: Some(m),
                 ..Default::default()
             },
             FinalMeasurementOrReason::Reason(infeasible_reason) => CompleteTrialRequest {
-                name: format!(
-                    "projects/{project}/locations/{location}/studies/{study}/trials/{trial}",
-                    project = self.project,
-                    location = self.location,
-                    study = self.study,
-                    trial = self.trial,
-                ),
+                name: self.trial_name.into(),
                 final_measurement: None,
                 trial_infeasible: true,
                 infeasible_reason,

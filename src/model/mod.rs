@@ -12,5 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub(crate) mod study;
+pub mod study;
 pub(crate) mod trial;

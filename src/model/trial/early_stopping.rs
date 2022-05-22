@@ -13,33 +13,20 @@
 // limitations under the License.
 
 use crate::google::cloud::aiplatform::v1::CheckTrialEarlyStoppingStateRequest;
+use crate::TrialName;
 
 pub struct RequestBuilder {
-    project: String,
-    location: String,
-    study: String,
-    trial: String,
+    trial_name: TrialName,
 }
 
 impl RequestBuilder {
-    pub fn new(project: String, location: String, study: String, trial: String) -> Self {
-        RequestBuilder {
-            project,
-            location,
-            study,
-            trial,
-        }
+    pub fn new(trial_name: TrialName) -> Self {
+        RequestBuilder { trial_name }
     }
 
     pub fn build(self) -> CheckTrialEarlyStoppingStateRequest {
         CheckTrialEarlyStoppingStateRequest {
-            trial_name: format!(
-                "projects/{project}/locations/{location}/studies/{study}/trials/{trial}",
-                project = self.project,
-                location = self.location,
-                study = self.study,
-                trial = self.trial,
-            ),
+            trial_name: self.trial_name.into(),
         }
     }
 }

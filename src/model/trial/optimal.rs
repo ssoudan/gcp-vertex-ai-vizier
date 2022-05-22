@@ -13,30 +13,20 @@
 // limitations under the License.
 
 use crate::google::cloud::aiplatform::v1::ListOptimalTrialsRequest;
+use crate::StudyName;
 
 pub struct RequestBuilder {
-    project: String,
-    location: String,
-    study: String,
+    study_name: StudyName,
 }
 
 impl RequestBuilder {
-    pub fn new(project: String, location: String, study: String) -> Self {
-        RequestBuilder {
-            project,
-            location,
-            study,
-        }
+    pub fn new(study_name: StudyName) -> Self {
+        RequestBuilder { study_name }
     }
 
     pub fn build(self) -> ListOptimalTrialsRequest {
         ListOptimalTrialsRequest {
-            parent: format!(
-                "projects/{project}/locations/{location}/studies/{study}",
-                project = self.project,
-                location = self.location,
-                study = self.study
-            ),
+            parent: self.study_name.into(),
         }
     }
 }

@@ -13,27 +13,20 @@
 // limitations under the License.
 
 use crate::google::cloud::aiplatform::v1::SuggestTrialsRequest;
+use crate::StudyName;
+
+// TODO(ssoudan) change builder to take Into<String>-ish
 
 pub struct RequestBuilder {
-    project: String,
-    location: String,
-    study: String,
+    study_name: StudyName,
     suggestion_count: i32,
     client_id: String,
 }
 
 impl RequestBuilder {
-    pub fn new(
-        project: String,
-        location: String,
-        study: String,
-        suggestion_count: i32,
-        client_id: String,
-    ) -> Self {
+    pub fn new(study_name: StudyName, suggestion_count: i32, client_id: String) -> Self {
         RequestBuilder {
-            project,
-            location,
-            study,
+            study_name,
             suggestion_count,
             client_id,
         }
@@ -41,12 +34,7 @@ impl RequestBuilder {
 
     pub fn build(self) -> SuggestTrialsRequest {
         SuggestTrialsRequest {
-            parent: format!(
-                "projects/{project}/locations/{location}/studies/{study}",
-                project = self.project,
-                location = self.location,
-                study = self.study,
-            ),
+            parent: self.study_name.into(),
             suggestion_count: self.suggestion_count,
             client_id: self.client_id,
         }

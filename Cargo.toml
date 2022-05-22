@@ -9,6 +9,10 @@ authors = ["Sebastien Soudan <sebastien.soudan@gmail.com>"]
 name = "simple"
 path = "examples/simple.rs"
 
+[[example]]
+name = "e2e"
+path = "examples/e2e.rs"
+
 [dev-dependencies]
 tokio = { version = "1.18.2", features = ["macros", "rt-multi-thread"] }
 
