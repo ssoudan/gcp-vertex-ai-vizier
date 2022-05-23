@@ -12,6 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! End to end example of how to use VizierClient to run a study.
+use std::collections::HashMap;
+use std::env;
+use std::time::{SystemTime, UNIX_EPOCH};
+
 use gcp_vertex_ai_vizier::google::cloud::aiplatform::v1::study_spec::metric_spec::GoalType;
 use gcp_vertex_ai_vizier::google::cloud::aiplatform::v1::study_spec::parameter_spec::{
     DoubleValueSpec, ParameterValueSpec, ScaleType,
@@ -23,14 +28,12 @@ use gcp_vertex_ai_vizier::google::cloud::aiplatform::v1::trial::State;
 use gcp_vertex_ai_vizier::google::cloud::aiplatform::v1::{
     measurement, Measurement, StudySpec, Trial,
 };
+use gcp_vertex_ai_vizier::model::study::spec::StudySpecBuilder;
 use gcp_vertex_ai_vizier::model::study::ToStudyName;
 use gcp_vertex_ai_vizier::model::trial::complete::FinalMeasurementOrReason;
 use gcp_vertex_ai_vizier::model::trial::ToTrialName;
 use gcp_vertex_ai_vizier::VizierClient;
 use prost_types::value::Kind;
-use std::collections::HashMap;
-use std::env;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Hammelblau's function
 fn f(x: f64, y: f64) -> f64 {
@@ -43,42 +46,40 @@ async fn main() {
 
     let location = "us-central1".to_string();
 
-    let mut client = VizierClient::new(project.clone(), location.clone())
-        .await
-        .unwrap();
+    let mut client = VizierClient::new(project, location).await.unwrap();
 
-    let study_spec = StudySpec {
-        metrics: vec![MetricSpec {
-            metric_id: "m".to_string(),
-            goal: GoalType::Minimize as i32,
-        }],
-        parameters: vec![
-            ParameterSpec {
-                parameter_id: "x".to_string(),
-                scale_type: ScaleType::Unspecified as i32,
-                conditional_parameter_specs: vec![],
-                parameter_value_spec: Some(ParameterValueSpec::DoubleValueSpec(DoubleValueSpec {
-                    min_value: -5.0,
-                    max_value: 5.0,
-                    default_value: Some(0.0),
-                })),
-            },
-            ParameterSpec {
-                parameter_id: "y".to_string(),
-                scale_type: ScaleType::Unspecified as i32,
-                conditional_parameter_specs: vec![],
-                parameter_value_spec: Some(ParameterValueSpec::DoubleValueSpec(DoubleValueSpec {
-                    min_value: -5.0,
-                    max_value: 5.0,
-                    default_value: Some(0.0),
-                })),
-            },
-        ],
-        algorithm: Algorithm::Unspecified as i32,
-        observation_noise: ObservationNoise::Low as i32,
-        measurement_selection_type: MeasurementSelectionType::LastMeasurement as i32,
-        automated_stopping_spec: None,
-    };
+    let study_spec = StudySpecBuilder::new(
+        Algorithm::Unspecified,
+        ObservationNoise::Low,
+        MeasurementSelectionType::LastMeasurement,
+    )
+    .with_metric_specs(vec![MetricSpec {
+        metric_id: "m".to_string(),
+        goal: GoalType::Minimize as i32,
+    }])
+    .with_parameters(vec![
+        ParameterSpec {
+            parameter_id: "x".to_string(),
+            scale_type: ScaleType::Unspecified as i32,
+            conditional_parameter_specs: vec![],
+            parameter_value_spec: Some(ParameterValueSpec::DoubleValueSpec(DoubleValueSpec {
+                min_value: -5.0,
+                max_value: 5.0,
+                default_value: Some(0.0),
+            })),
+        },
+        ParameterSpec {
+            parameter_id: "y".to_string(),
+            scale_type: ScaleType::Unspecified as i32,
+            conditional_parameter_specs: vec![],
+            parameter_value_spec: Some(ParameterValueSpec::DoubleValueSpec(DoubleValueSpec {
+                min_value: -5.0,
+                max_value: 5.0,
+                default_value: Some(0.0),
+            })),
+        },
+    ])
+    .build();
 
     let epoch = SystemTime::now()
         .duration_since(UNIX_EPOCH)

@@ -12,19 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Trial create request builder.
+
 use crate::google::cloud::aiplatform::v1::CreateTrialRequest;
 use crate::StudyName;
 
+/// [CreateTrialRequest] builder.
 pub struct RequestBuilder {
     study_name: StudyName,
     trial: crate::google::cloud::aiplatform::v1::Trial,
 }
 
 impl RequestBuilder {
+    /// Creates a new instance of [CreateTrialRequest] builder.
     pub fn new(study_name: StudyName, trial: crate::google::cloud::aiplatform::v1::Trial) -> Self {
         RequestBuilder { study_name, trial }
     }
 
+    /// Builds the [CreateTrialRequest].
     pub fn build(self) -> CreateTrialRequest {
         CreateTrialRequest {
             parent: self.study_name.into(),

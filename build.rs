@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Builds GRPC client from the proto files.
+
 fn main() -> std::io::Result<()> {
     tonic_build::configure().build_server(false).compile(
         &[

@@ -12,15 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Trial add_measurement request builder.
+
 use crate::google::cloud::aiplatform::v1::AddTrialMeasurementRequest;
 use crate::{Measurement, TrialName};
 
+/// [AddTrialMeasurementRequest] builder.
 pub struct RequestBuilder {
     trial_name: TrialName,
     measurement: Measurement,
 }
 
 impl RequestBuilder {
+    /// Creates a new instance of [AddTrialMeasurementRequest] builder.
     pub fn new(trial_name: TrialName, measurement: Measurement) -> Self {
         RequestBuilder {
             trial_name,
@@ -28,6 +32,7 @@ impl RequestBuilder {
         }
     }
 
+    /// Builds the [AddTrialMeasurementRequest].
     pub fn build(self) -> AddTrialMeasurementRequest {
         AddTrialMeasurementRequest {
             trial_name: self.trial_name.into(),

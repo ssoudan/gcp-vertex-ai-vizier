@@ -4,6 +4,20 @@ version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
 authors = ["Sebastien Soudan <sebastien.soudan@gmail.com>"]
+exclude = [
+    "/.github/*",
+    "/.cargo/*",
+    "/.gitignore",
+]
+description = """
+An async client library for GCP Vertex AI Vizier.
+"""
+homepage = "https://github.com/ssoudan/gcp-vertex-ai-vizier"
+repository = "https://github.com/ssoudan/gcp-vertex-ai-vizier"
+documentation = "https://docs.rs/gcp-vertex-ai-vizier"
+readme = "README.md"
+keywords = ["gcp", "google-cloud", "vizier", "optimization", "hyperparameter"]
+categories = ["algorithms", "science"]
 
 [[example]]
 name = "simple"
@@ -25,7 +39,7 @@ prost = "0.10.0"
 prost-types = "0.10.0"
 tokio = "1.18.2"
 thiserror = "1.0.31"
-google-authz = {version = "1.0.0-alpha.4", features = ["tonic"]}
+google-authz = {version = "1.0.0-alpha.5", features = ["tonic"]}
 regex = "1.5.5"
 
 [build-dependencies]

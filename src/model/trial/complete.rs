@@ -12,20 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Trial complete request builder.
+
 use crate::google::cloud::aiplatform::v1::CompleteTrialRequest;
 use crate::{Measurement, TrialName};
 
+/// Final measurement or reason for a trial to have ended.
 pub enum FinalMeasurementOrReason {
+    /// Final measurement of the trial.
     FinalMeasurement(Measurement),
+    /// Reason for the trial to have ended.
     Reason(String),
 }
 
+/// [CompleteTrialRequest] builder.
 pub struct RequestBuilder {
     trial_name: TrialName,
     final_measurement: FinalMeasurementOrReason,
 }
 
 impl RequestBuilder {
+    /// Creates a new instance of [CompleteTrialRequest] builder.
     pub fn new(trial_name: TrialName, final_measurement: FinalMeasurementOrReason) -> Self {
         RequestBuilder {
             trial_name,
@@ -33,6 +40,7 @@ impl RequestBuilder {
         }
     }
 
+    /// Builds the [CompleteTrialRequest].
     pub fn build(self) -> CompleteTrialRequest {
         match self.final_measurement {
             FinalMeasurementOrReason::FinalMeasurement(m) => CompleteTrialRequest {

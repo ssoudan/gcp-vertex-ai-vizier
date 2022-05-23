@@ -12,22 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Study create request builder.
+
 use regex::Regex;
 
 use crate::google::cloud::aiplatform::v1::{CreateStudyRequest, Study, StudySpec};
 
+/// Error returned by [RequestBuilder].
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
+    /// The display_name is invalid.
     #[error("display_name must match [a-z][a-z0-9_]*")]
     InvalidDisplayName,
+    /// Display_name is missing
     #[error("display_name is required")]
     DisplayNameRequired,
+    /// Study_spec is missing
     #[error("study_spec is required")]
     StudySpecRequired,
+    /// Study_spec is missing or Display_name is missing
     #[error("study_spec and display_name is required")]
     StudySpecAndDisplayNameRequired,
 }
 
+/// [CreateStudyRequest] builder.
 pub struct RequestBuilder {
     project: String,
     location: String,
@@ -36,6 +44,7 @@ pub struct RequestBuilder {
 }
 
 impl RequestBuilder {
+    /// Create a new [RequestBuilder] for the given project and location.
     pub fn new(project: String, location: String) -> Self {
         Self {
             project,
@@ -45,16 +54,19 @@ impl RequestBuilder {
         }
     }
 
+    /// Set the display name - required.
     pub fn with_display_name(mut self, display_name: String) -> Self {
         self.display_name = Some(display_name);
         self
     }
 
+    /// Set the study spec - required.
     pub fn with_study_spec(mut self, study_spec: StudySpec) -> Self {
         self.study_spec = Some(study_spec);
         self
     }
 
+    /// Builds the [CreateStudyRequest].
     pub fn build(self) -> Result<CreateStudyRequest, Error> {
         match (self.display_name, self.study_spec) {
             (Some(display_name), Some(study_spec)) => {

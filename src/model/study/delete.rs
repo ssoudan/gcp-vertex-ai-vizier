@@ -12,18 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Study delete request builder.
+
 use crate::google::cloud::aiplatform::v1::DeleteStudyRequest;
 use crate::StudyName;
 
+/// [DeleteStudyRequest] builder.
 pub struct RequestBuilder {
     study_name: StudyName,
 }
 
 impl RequestBuilder {
+    /// Creates a new instance of [DeleteStudyRequest] builder.
     pub fn new(study_name: StudyName) -> Self {
         RequestBuilder { study_name }
     }
 
+    /// Builds the [DeleteStudyRequest].
     pub fn build(self) -> DeleteStudyRequest {
         DeleteStudyRequest {
             name: self.study_name.into(),

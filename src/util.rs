@@ -12,21 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::google::rpc::Status;
-use crate::operation;
+//! Utilities for the Vizier API.
 
 use prost::DecodeError;
 
+use crate::google::rpc::Status;
+use crate::operation;
+
+/// Error from decoding operation results.
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
+    /// Error while decoding
     #[error("{0}")]
     DecodeError(#[from] DecodeError),
+    /// RPC error
     #[error("Status: {}", .0.message)]
     RPCStatus(Status),
+    /// Invalid type
     #[error("Invalid type {0}")]
     InvalidType(String),
 }
 
+/// Decodes the result of an operation as with the specified [`type_url`](Any.type_url) as
+/// the provided (by the generic type parameter `X`) message.
 pub fn decode_operation_result_as<X>(
     result: operation::Result,
     type_url: impl AsRef<str>,

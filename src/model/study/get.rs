@@ -12,18 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Study get request builder.
+
 use crate::google::cloud::aiplatform::v1::GetStudyRequest;
 use crate::StudyName;
 
+/// [GetStudyRequest] builder.
 pub struct RequestBuilder {
     study_name: StudyName,
 }
 
 impl RequestBuilder {
+    /// Creates a new instance of [GetStudyRequest] builder.
     pub fn new(study_name: StudyName) -> Self {
         RequestBuilder { study_name }
     }
 
+    /// Builds the [GetStudyRequest].
     pub fn build(self) -> GetStudyRequest {
         GetStudyRequest {
             name: self.study_name.into(),
