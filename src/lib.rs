@@ -103,9 +103,32 @@ const CERTIFICATES: &str = include_str!("../certs/roots.pem");
 
 impl VizierClient {
     /// Creates a new VizierClient.
+    ///
     /// # Arguments
     /// * `project` - The project id.
     /// * `location` - The location id. See https://cloud.google.com/functions/docs/reference/rpc/google.cloud.location
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// let project = env::var("GOOGLE_CLOUD_PROJECT").unwrap();
+    /// let location = "us-central1".to_string();
+    ///
+    /// let mut client = VizierClient::new(project.clone(), location.clone())
+    ///     .await
+    ///     .unwrap();
+    ///
+    /// let request = client
+    ///     .mk_list_studies_request_builder()
+    ///     .with_page_size(2)
+    ///     .build();
+    ///
+    /// let studies = client.service.list_studies(request).await.unwrap();
+    /// let study_list = &studies.get_ref().studies;
+    /// for t in study_list {
+    ///     println!("- {}", &t.display_name);
+    /// }
+    /// ```
     pub async fn new(project: String, location: String) -> Result<Self, Error> {
         let domain_name = format!("{location}-aiplatform.googleapis.com", location = location);
 

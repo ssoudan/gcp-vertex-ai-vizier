@@ -20,8 +20,6 @@ use gcp_vertex_ai_vizier::VizierClient;
 
 #[tokio::main]
 async fn main() {
-    println!("Hello, world!");
-
     let project = env::var("GOOGLE_CLOUD_PROJECT").unwrap();
 
     let location = "us-central1".to_string();
