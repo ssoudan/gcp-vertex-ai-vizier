@@ -13,3 +13,7 @@ Licensed under Apache-2.0. See [LICENSE](./LICENSE) for details.
 
 See [./examples/](./examples/).
 
+If you are looking for a more complex use case of black-box optimization different from 
+hyper-parameters optimization, check this out: 
+https://cloud.google.com/blog/products/ai-machine-learning/optimize-your-applications-using-google-vertex-ai-vizier.
+
