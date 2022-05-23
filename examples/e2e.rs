@@ -19,18 +19,17 @@ use gcp_vertex_ai_vizier::google::cloud::aiplatform::v1::study_spec::parameter_s
 use gcp_vertex_ai_vizier::google::cloud::aiplatform::v1::study_spec::{
     Algorithm, MeasurementSelectionType, MetricSpec, ObservationNoise, ParameterSpec,
 };
+use gcp_vertex_ai_vizier::google::cloud::aiplatform::v1::trial::State;
 use gcp_vertex_ai_vizier::google::cloud::aiplatform::v1::{
-    measurement, Measurement, StudySpec, SuggestTrialsMetadata, SuggestTrialsResponse, Trial,
+    measurement, Measurement, StudySpec, Trial,
 };
 use gcp_vertex_ai_vizier::model::study::ToStudyName;
 use gcp_vertex_ai_vizier::model::trial::complete::FinalMeasurementOrReason;
 use gcp_vertex_ai_vizier::model::trial::ToTrialName;
-use gcp_vertex_ai_vizier::{util, VizierClient};
-use prost::Message;
+use gcp_vertex_ai_vizier::VizierClient;
 use prost_types::value::Kind;
 use std::collections::HashMap;
 use std::env;
-use std::thread::sleep;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Hammelblau's function
@@ -50,7 +49,7 @@ async fn main() {
 
     let study_spec = StudySpec {
         metrics: vec![MetricSpec {
-            metric_id: "m".to_string(), // TODO(ssoudan) unique and w/o whitespaces
+            metric_id: "m".to_string(),
             goal: GoalType::Minimize as i32,
         }],
         parameters: vec![
@@ -102,38 +101,16 @@ async fn main() {
             let study_name = study.to_study_name();
 
             for _ in 0..4 {
+                // get some suggested trials
                 let req = client.mk_suggest_trials_request(
                     study_name.clone(),
                     5,
                     "test_hammelblau_1".to_string(),
                 );
 
-                let trials = client.service.suggest_trials(req).await.unwrap();
-                let operation = trials.into_inner();
+                let resp = client.suggest_trials(req).await.unwrap();
 
-                dbg!(&operation);
-
-                let metadata = operation.metadata.as_ref().unwrap();
-                let metadata: SuggestTrialsMetadata =
-                    SuggestTrialsMetadata::decode(&metadata.value[..]).unwrap();
-                dbg!(&metadata);
-
-                let result = loop {
-                    sleep(std::time::Duration::from_secs(1));
-                    let result = client.get_operation(operation.name.clone()).await;
-                    dbg!(&result);
-                    if result.is_some() {
-                        break result.unwrap();
-                    }
-                };
-
-                // parse the result into trials
-                let resp: SuggestTrialsResponse = util::decode_operation_result_as(
-                    result,
-                    "type.googleapis.com/google.cloud.aiplatform.v1.SuggestTrialsResponse",
-                )
-                .unwrap();
-
+                // run the trials
                 for trial in resp.trials.iter() {
                     dbg!(&trial);
 
@@ -165,20 +142,11 @@ async fn main() {
                         final_measurement_or_reason,
                     );
 
-                    match client.service.complete_trial(request).await {
-                        Ok(trial) => {
-                            let trial = trial.get_ref();
-                            dbg!(trial);
-                        }
-                        Err(e) => {
-                            dbg!(e);
-                        }
-                    };
+                    let trial = client.service.complete_trial(request).await.unwrap();
+                    let trial = trial.get_ref();
+                    dbg!(State::from_i32(trial.state).unwrap());
                 }
             }
-
-            // TODO(ssoudan) get suggested trials
-            // TODO(ssoudan) run the trials
 
             // get the best trials
             let request = client.mk_list_optimal_trials_request(study_name.clone());

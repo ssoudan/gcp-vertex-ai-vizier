@@ -24,7 +24,7 @@ use crate::google::cloud::aiplatform::v1::{
     AddTrialMeasurementRequest, CheckTrialEarlyStoppingStateRequest, CompleteTrialRequest,
     CreateTrialRequest, DeleteStudyRequest, DeleteTrialRequest, GetStudyRequest, GetTrialRequest,
     ListOptimalTrialsRequest, LookupStudyRequest, Measurement, StopTrialRequest,
-    SuggestTrialsRequest, Trial,
+    SuggestTrialsRequest, SuggestTrialsResponse, Trial,
 };
 use crate::google::longrunning::operations_client::OperationsClient;
 use crate::google::longrunning::{operation, GetOperationRequest, Operation, WaitOperationRequest};
@@ -61,6 +61,7 @@ pub mod google {
     }
 }
 
+#[derive(Clone)]
 pub struct VizierClient {
     location: String,
     project: String,
@@ -74,6 +75,10 @@ pub enum Error {
     Tonic(#[from] tonic::transport::Error),
     #[error("{0}")]
     InvalidUri(#[from] InvalidUri),
+    #[error("{0}")]
+    DecodingError(#[from] util::Error),
+    #[error("Status: {}", .0.message())]
+    Status(#[from] tonic::Status),
 }
 
 const CERTIFICATES: &str = include_str!("../certs/roots.pem");
@@ -270,6 +275,31 @@ impl VizierClient {
             None
         }
     }
+
+    pub async fn suggest_trials(
+        &mut self,
+        request: SuggestTrialsRequest,
+    ) -> Result<SuggestTrialsResponse, Error> {
+        let trials = self.service.suggest_trials(request).await?;
+        let operation = trials.into_inner();
+
+        dbg!(&operation);
+
+        let result = loop {
+            if let Some(result) = self.get_operation(operation.name.clone()).await {
+                break result;
+            }
+            sleep(Duration::from_millis(500)).await; // TODO(ssoudan) need that?
+        };
+
+        // parse the result into trials
+        let resp: SuggestTrialsResponse = util::decode_operation_result_as(
+            result,
+            "type.googleapis.com/google.cloud.aiplatform.v1.SuggestTrialsResponse",
+        )?;
+
+        Ok(resp)
+    }
 }
 
 #[cfg(test)]
@@ -280,6 +310,7 @@ mod trials {
     };
     use crate::trial::complete::FinalMeasurementOrReason;
     use crate::util::decode_operation_result_as;
+    use crate::{util, SuggestTrialsResponse};
     use std::time::Duration;
     use tonic::Code;
 
@@ -326,7 +357,7 @@ mod trials {
     }
 
     #[tokio::test]
-    async fn it_suggests_trials() {
+    async fn it_suggests_trials_raw() {
         let mut client = test_client().await;
 
         let study = "53316451264".to_string();
@@ -344,9 +375,34 @@ mod trials {
             .wait_for_operation(operation, Some(Duration::from_secs(4)))
             .await
             .unwrap();
-        dbg!(result);
 
-        // TODO(ssoudan) need to parse the result
+        // parse the result into trials
+        let resp: SuggestTrialsResponse = util::decode_operation_result_as(
+            result,
+            "type.googleapis.com/google.cloud.aiplatform.v1.SuggestTrialsResponse",
+        )
+        .unwrap();
+
+        dbg!(&resp);
+
+        assert_eq!(resp.trials.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn it_suggests_trials() {
+        let mut client = test_client().await;
+
+        let study = "53316451264".to_string();
+
+        let study_name = client.study_name(study);
+
+        let client_id = "it_can_suggest_trials".to_string();
+
+        let request = client.mk_suggest_trials_request(study_name, 2, client_id);
+
+        let resp = client.suggest_trials(request).await.unwrap();
+
+        dbg!(resp);
     }
 
     // FUTURE(ssoudan) add a test for create_trial
