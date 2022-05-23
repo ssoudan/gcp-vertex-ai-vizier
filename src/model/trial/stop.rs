@@ -12,18 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Trial early stop request builder.
+
 use crate::google::cloud::aiplatform::v1::StopTrialRequest;
 use crate::TrialName;
 
+/// [StopTrialRequest] builder.
 pub struct RequestBuilder {
     trial_name: TrialName,
 }
 
 impl RequestBuilder {
+    /// Creates a new instance of [StopTrialRequest] builder.
     pub fn new(trial_name: TrialName) -> Self {
         RequestBuilder { trial_name }
     }
 
+    /// Builds the [StopTrialRequest].
     pub fn build(self) -> StopTrialRequest {
         StopTrialRequest {
             name: self.trial_name.into(),

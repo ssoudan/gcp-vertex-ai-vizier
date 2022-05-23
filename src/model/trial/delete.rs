@@ -12,18 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Trial delete request builder.
+
 use crate::google::cloud::aiplatform::v1::DeleteTrialRequest;
 use crate::TrialName;
 
+/// [DeleteTrialRequest] builder.
 pub struct RequestBuilder {
     trial_name: TrialName,
 }
 
 impl RequestBuilder {
+    /// Creates a new instance of [DeleteTrialRequest] builder.
     pub fn new(trial_name: TrialName) -> Self {
         RequestBuilder { trial_name }
     }
 
+    /// Builds the [DeleteTrialRequest].
     pub fn build(self) -> DeleteTrialRequest {
         DeleteTrialRequest {
             name: self.trial_name.into(),

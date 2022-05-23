@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Trial model.
+
 use crate::{StudyName, Trial};
 
 pub mod add_measurement;
@@ -25,10 +27,12 @@ pub mod optimal;
 pub mod stop;
 pub mod suggest;
 
+/// The name of a trial.
 #[derive(Clone, PartialEq, Debug)]
 pub struct TrialName(String);
 
 impl TrialName {
+    /// Creates a new TrialName from its parts.
     pub fn new(project: String, location: String, study: String, trial: String) -> Self {
         TrialName(format!(
             "projects/{}/locations/{}/studies/{}/trials/{}",
@@ -36,13 +40,16 @@ impl TrialName {
         ))
     }
 
+    /// Creates a new trial name from a [StudyName] and a trial number.
     pub fn from_study(study_name: &StudyName, trial: String) -> Self {
         let study: String = study_name.into();
         TrialName(format!("{}/trials/{}", study, trial))
     }
 }
 
+/// Can be converted to a [TrialName].
 pub trait ToTrialName {
+    /// Creates a [TrialName] from this object.
     fn to_trial_name(&self) -> TrialName;
 }
 

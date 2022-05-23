@@ -12,8 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use gcp_vertex_ai_vizier::VizierClient;
+//! Simple example of how to use the Vizier API.
+
 use std::env;
+
+use gcp_vertex_ai_vizier::VizierClient;
 
 #[tokio::main]
 async fn main() {

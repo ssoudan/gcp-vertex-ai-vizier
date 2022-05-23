@@ -12,8 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Study lookup request builder.
+
 use crate::google::cloud::aiplatform::v1::LookupStudyRequest;
 
+/// [LookupStudyRequest] builder.
 pub struct RequestBuilder {
     project: String,
     location: String,
@@ -21,6 +24,7 @@ pub struct RequestBuilder {
 }
 
 impl RequestBuilder {
+    /// Creates a new instance of [LookupStudyRequest] builder.
     pub fn new(project: String, location: String, display_name: String) -> Self {
         RequestBuilder {
             project,
@@ -29,6 +33,7 @@ impl RequestBuilder {
         }
     }
 
+    /// Builds the [LookupStudyRequest].
     pub fn build(self) -> LookupStudyRequest {
         LookupStudyRequest {
             parent: format!(

@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Study model.
+
 use crate::google::cloud::aiplatform::v1::Study;
 
 pub mod create;
@@ -19,11 +21,14 @@ pub mod delete;
 pub mod get;
 pub mod list;
 pub mod lookup;
+pub mod spec;
 
+/// The name of a study.
 #[derive(Clone, PartialEq, Debug)]
 pub struct StudyName(String);
 
 impl StudyName {
+    /// Creates a new StudyName from its parts.
     pub fn new(project: String, location: String, study: String) -> Self {
         StudyName(format!(
             "projects/{}/locations/{}/studies/{}",
@@ -32,7 +37,9 @@ impl StudyName {
     }
 }
 
+/// Can be converted to a [StudyName].
 pub trait ToStudyName {
+    /// Converts this object to a [StudyName].
     fn to_study_name(&self) -> StudyName;
 }
 

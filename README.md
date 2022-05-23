@@ -9,11 +9,16 @@ service.
 
 Under Apache-2.0. See [LICENSE](./LICENSE) for details.
 
+# Examples
+
+See [./examples/](./examples/).
+
 # Todo
 
 - [x] decent build
 - [ ] iterators for pagination
 - [ ] error handling
+- [ ] documentation
 - [ ] unit tests
 - [ ] publication
 - [ ] examples

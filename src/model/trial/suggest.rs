@@ -12,11 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Trial suggest request builder.
+
 use crate::google::cloud::aiplatform::v1::SuggestTrialsRequest;
 use crate::StudyName;
 
-// TODO(ssoudan) change builder to take Into<String>-ish
-
+/// [SuggestTrialsRequest] builder.
 pub struct RequestBuilder {
     study_name: StudyName,
     suggestion_count: i32,
@@ -24,6 +25,7 @@ pub struct RequestBuilder {
 }
 
 impl RequestBuilder {
+    /// Creates a new instance of [SuggestTrialsRequest] builder.
     pub fn new(study_name: StudyName, suggestion_count: i32, client_id: String) -> Self {
         RequestBuilder {
             study_name,
@@ -32,6 +34,7 @@ impl RequestBuilder {
         }
     }
 
+    /// Builds the [SuggestTrialsRequest].
     pub fn build(self) -> SuggestTrialsRequest {
         SuggestTrialsRequest {
             parent: self.study_name.into(),

@@ -12,18 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Trial list optimal request builder.
+
 use crate::google::cloud::aiplatform::v1::ListOptimalTrialsRequest;
 use crate::StudyName;
 
+/// [ListOptimalTrialsRequest] builder.
 pub struct RequestBuilder {
     study_name: StudyName,
 }
 
 impl RequestBuilder {
+    /// Creates a new instance of [ListOptimalTrialsRequest] builder.
     pub fn new(study_name: StudyName) -> Self {
         RequestBuilder { study_name }
     }
 
+    /// Builds the [ListOptimalTrialsRequest].
     pub fn build(self) -> ListOptimalTrialsRequest {
         ListOptimalTrialsRequest {
             parent: self.study_name.into(),

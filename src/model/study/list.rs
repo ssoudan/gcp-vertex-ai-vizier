@@ -12,8 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Study list request builder.
+
 use crate::google::cloud::aiplatform::v1::ListStudiesRequest;
 
+/// [ListStudiesRequest] builder.
 pub struct RequestBuilder {
     project: String,
     location: String,
@@ -22,6 +25,7 @@ pub struct RequestBuilder {
 }
 
 impl RequestBuilder {
+    /// Creates a new instance of [ListStudiesRequest] builder.
     pub fn new(project: String, location: String) -> Self {
         RequestBuilder {
             project,
@@ -31,16 +35,20 @@ impl RequestBuilder {
         }
     }
 
+    /// Sets the page size.
     pub fn with_page_size(mut self, page_size: i32) -> Self {
         self.page_size = Some(page_size);
         self
     }
 
+    /// Sets the page token to get a following page - See
+    /// [`next_page_token`](ListStudiesResponse.next_page_token).
     pub fn with_page_token(mut self, page_token: String) -> Self {
         self.page_token = Some(page_token);
         self
     }
 
+    /// Builds the [ListStudiesRequest].
     pub fn build(self) -> ListStudiesRequest {
         ListStudiesRequest {
             parent: format!(
