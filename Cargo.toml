@@ -34,7 +34,7 @@ tokio = { version = "1.18.2", features = ["macros", "rt-multi-thread"] }
 doctest = false
 
 [dependencies]
-tonic = { version = "0.7", features = ["tls", "compression"] }
+tonic = { version = "0.7", features = ["tls"] }
 prost = "0.10.0"
 prost-types = "0.10.0"
 tokio = "1.18.2"
@@ -43,4 +43,4 @@ google-authz = {version = "1.0.0-alpha.5", features = ["tonic"]}
 regex = "1.5.5"
 
 [build-dependencies]
-tonic-build = { version = "0.7", features = ["prost", "compression"] }
+tonic-build = { version = "0.7", features = ["prost"] }

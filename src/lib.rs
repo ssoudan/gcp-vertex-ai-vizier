@@ -145,7 +145,7 @@ impl VizierClient {
                 .await?;
             let channel = GoogleAuthz::new(channel).await;
 
-            VizierServiceClient::new(channel).send_gzip().accept_gzip()
+            VizierServiceClient::new(channel)
         };
 
         let operation_service = {
@@ -161,7 +161,7 @@ impl VizierClient {
                 .await?;
             let channel = GoogleAuthz::new(channel).await;
 
-            OperationsClient::new(channel).send_gzip().accept_gzip()
+            OperationsClient::new(channel)
         };
 
         Ok(Self {

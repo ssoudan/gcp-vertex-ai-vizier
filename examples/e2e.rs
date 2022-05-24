@@ -25,9 +25,7 @@ use gcp_vertex_ai_vizier::google::cloud::aiplatform::v1::study_spec::{
     Algorithm, MeasurementSelectionType, MetricSpec, ObservationNoise, ParameterSpec,
 };
 use gcp_vertex_ai_vizier::google::cloud::aiplatform::v1::trial::State;
-use gcp_vertex_ai_vizier::google::cloud::aiplatform::v1::{
-    measurement, Measurement, StudySpec, Trial,
-};
+use gcp_vertex_ai_vizier::google::cloud::aiplatform::v1::{measurement, Measurement, Trial};
 use gcp_vertex_ai_vizier::model::study::spec::StudySpecBuilder;
 use gcp_vertex_ai_vizier::model::study::ToStudyName;
 use gcp_vertex_ai_vizier::model::trial::complete::FinalMeasurementOrReason;
