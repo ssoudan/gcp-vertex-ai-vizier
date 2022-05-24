@@ -30,8 +30,8 @@ use gcp_vertex_ai_vizier::model::study::spec::StudySpecBuilder;
 use gcp_vertex_ai_vizier::model::study::ToStudyName;
 use gcp_vertex_ai_vizier::model::trial::complete::FinalMeasurementOrReason;
 use gcp_vertex_ai_vizier::model::trial::ToTrialName;
+use gcp_vertex_ai_vizier::prost_types::value::Kind;
 use gcp_vertex_ai_vizier::VizierClient;
-use prost_types::value::Kind;
 
 /// Hammelblau's function
 fn f(x: f64, y: f64) -> f64 {

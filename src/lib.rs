@@ -18,6 +18,7 @@ use std::time::Duration;
 
 use google::cloud::aiplatform::v1::vizier_service_client::VizierServiceClient;
 use google_authz::GoogleAuthz;
+pub use prost_types;
 use tokio::time::sleep;
 use tonic::codegen::http::uri::InvalidUri;
 use tonic::transport::{Certificate, Channel, ClientTlsConfig};
