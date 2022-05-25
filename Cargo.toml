@@ -21,7 +21,7 @@ categories = ["algorithms", "science"]
 
 [features]
 default = []
-vendored = []
+vendored = ["prost-build/vendored"]
 
 [[example]]
 name = "simple"
@@ -48,9 +48,7 @@ regex = "1.5.5"
 
 [build-dependencies]
 tonic-build = { version = "0.7", features = ["prost"] }
-
-[target.'cfg(vendored)'.build-dependencies]
-prost-build = { version = "0.10.4", features = ["vendored"] }
+prost-build = { version = "0.10.4" }
 
 [package.metadata.docs.rs]
 features = ["vendored"]
