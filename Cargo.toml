@@ -19,6 +19,10 @@ readme = "README.md"
 keywords = ["gcp", "google-cloud", "vizier", "optimization", "hyperparameter"]
 categories = ["algorithms", "science"]
 
+[features]
+default = []
+vendored = []
+
 [[example]]
 name = "simple"
 path = "examples/simple.rs"
@@ -44,3 +48,9 @@ regex = "1.5.5"
 
 [build-dependencies]
 tonic-build = { version = "0.7", features = ["prost"] }
+
+[target.'cfg(vendored)'.build-dependencies]
+prost-build = { version = "0.10.4", features = ["vendored"] }
+
+[package.metadata.docs.rs]
+features = ["vendored"]

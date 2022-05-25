@@ -456,7 +456,7 @@ mod trials {
     async fn it_suggests_trials_raw() {
         let mut client = test_client().await;
 
-        let study = "53316451264".to_string();
+        let study = "309382936968".to_string();
 
         let study_name = client.study_name(study);
 
@@ -491,7 +491,7 @@ mod trials {
     async fn it_suggests_trials() {
         let mut client = test_client().await;
 
-        let study = "53316451264".to_string();
+        let study = "309382936968".to_string();
 
         let study_name = client.study_name(study);
 
@@ -777,7 +777,7 @@ mod studies {
         let mut client = test_client().await;
 
         let study_spec = StudySpecBuilder::new(
-            Algorithm::Unspecified,
+            Algorithm::RandomSearch,
             ObservationNoise::Low,
             MeasurementSelectionType::LastMeasurement,
         )
@@ -813,7 +813,7 @@ mod studies {
 
         let request = client
             .mk_study_request_builder()
-            .with_display_name("blah".to_string())
+            .with_display_name("blah2".to_string())
             .with_study_spec(study_spec)
             .build()
             .unwrap();
