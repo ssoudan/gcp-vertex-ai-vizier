@@ -15,19 +15,22 @@
 //! Builds GRPC client from the proto files.
 
 fn main() -> std::io::Result<()> {
-    tonic_build::configure().build_server(false).compile(
-        &[
-            "protos/google/longrunning/operations.proto",
-            "protos/google/cloud/aiplatform/v1/operation.proto",
-            "protos/google/cloud/aiplatform/v1/vizier_service.proto",
-            "protos/google/cloud/aiplatform/v1/study.proto",
-            "protos/google/api/client.proto",
-            "protos/google/api/http.proto",
-            "protos/google/api/annotations.proto",
-            "protos/google/api/field_behavior.proto",
-            "protos/google/api/resource.proto",
-            "protos/google/rpc/status.proto",
-        ],
-        &["protos"],
-    )
+    tonic_build::configure()
+        .protoc_arg("--experimental_allow_proto3_optional")
+        .build_server(false)
+        .compile(
+            &[
+                "protos/google/longrunning/operations.proto",
+                "protos/google/cloud/aiplatform/v1/operation.proto",
+                "protos/google/cloud/aiplatform/v1/vizier_service.proto",
+                "protos/google/cloud/aiplatform/v1/study.proto",
+                "protos/google/api/client.proto",
+                "protos/google/api/http.proto",
+                "protos/google/api/annotations.proto",
+                "protos/google/api/field_behavior.proto",
+                "protos/google/api/resource.proto",
+                "protos/google/rpc/status.proto",
+            ],
+            &["protos"],
+        )
 }
