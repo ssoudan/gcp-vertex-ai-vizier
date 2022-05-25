@@ -13,6 +13,26 @@
 // limitations under the License.
 
 //! Unofficial GCP Vertex AI Vizier Client API.
+//!
+//! ```
+//! let project = env::var("GOOGLE_CLOUD_PROJECT").unwrap();
+//! let location = "us-central1".to_string();
+//!
+//! let mut client = VizierClient::new(project.clone(), location.clone())
+//!     .await
+//!     .unwrap();
+//!
+//! let request = client
+//!     .mk_list_studies_request_builder()
+//!     .with_page_size(2)
+//!     .build();
+//!
+//! let studies = client.service.list_studies(request).await.unwrap();
+//! let study_list = &studies.get_ref().studies;
+//! for t in study_list {
+//!     println!("- {}", &t.display_name);
+//! }
+//! ```
 
 use std::time::Duration;
 
@@ -134,34 +154,12 @@ impl VizierClient {
         let domain_name = format!("{location}-aiplatform.googleapis.com", location = location);
 
         let service = {
-            let tls_config = ClientTlsConfig::new()
-                .ca_certificate(Certificate::from_pem(CERTIFICATES))
-                .domain_name(&domain_name);
-
-            let endpoint = format!("https://{endpoint}", endpoint = domain_name);
-
-            let channel = Channel::from_shared(endpoint)?
-                .tls_config(tls_config)?
-                .connect()
-                .await?;
-            let channel = GoogleAuthz::new(channel).await;
-
+            let channel = Self::build_channel(domain_name.clone()).await?;
             VizierServiceClient::new(channel)
         };
 
         let operation_service = {
-            let tls_config = ClientTlsConfig::new()
-                .ca_certificate(Certificate::from_pem(CERTIFICATES))
-                .domain_name(&domain_name);
-
-            let endpoint = format!("https://{endpoint}", endpoint = domain_name);
-
-            let channel = Channel::from_shared(endpoint)?
-                .tls_config(tls_config)?
-                .connect()
-                .await?;
-            let channel = GoogleAuthz::new(channel).await;
-
+            let channel = Self::build_channel(domain_name).await?;
             OperationsClient::new(channel)
         };
 
@@ -171,6 +169,23 @@ impl VizierClient {
             service,
             operation_service,
         })
+    }
+
+    async fn build_channel(domain_name: String) -> Result<GoogleAuthz<Channel>, Error> {
+        let tls_config = ClientTlsConfig::new()
+            .ca_certificate(Certificate::from_pem(CERTIFICATES))
+            .domain_name(&domain_name);
+
+        let endpoint = format!("https://{endpoint}", endpoint = domain_name);
+
+        let channel = Channel::from_shared(endpoint)?
+            .user_agent("github.com/ssoudan/gcp-vertex-ai-vizier")?
+            .tls_config(tls_config)?
+            .connect_lazy();
+
+        let channel = GoogleAuthz::new(channel).await;
+
+        Ok(channel)
     }
 
     /// Creates a new [crate::google::cloud::aiplatform::v1::CreateStudyRequest] builder.
