@@ -40,7 +40,7 @@ fn f(x: f64, y: f64) -> f64 {
 
 #[tokio::main]
 async fn main() {
-    let project = env::var("GOOGLE_CLOUD_PROJECT").unwrap();
+    let project = env::var("GOOGLE_CLOUD_PROJECT").expect("GOOGLE_CLOUD_PROJECT must be set");
 
     let location = "us-central1".to_string();
 

@@ -12,6 +12,10 @@ service.
 
 Licensed under Apache-2.0. See [LICENSE](./LICENSE) for details.
 
+# Authentication 
+
+The library uses [`google-oauthz`](https://crates.io/crates/google-authz) crate to authenticate with the Google Cloud Platform.
+
 # Examples
 
 See [`examples`].
