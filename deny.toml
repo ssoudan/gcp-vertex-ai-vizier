@@ -75,7 +75,6 @@ allow = [
     "ISC",
     #"Apache-2.0 WITH LLVM-exception",
     "BSD-3-Clause",
-    "Zlib",
     "OpenSSL",
 ]
 # List of explicitly disallowed licenses
