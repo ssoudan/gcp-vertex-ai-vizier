@@ -48,7 +48,7 @@ regex = "1.5.5"
 
 [build-dependencies]
 tonic-build = { version = "0.7", features = ["prost"] }
-prost-build = { version = "0.10.4" }
+prost-build = { version = "0.11.0" }
 
 [package.metadata.docs.rs]
 features = ["vendored"]
