@@ -74,6 +74,7 @@ allow = [
     "Apache-2.0",
     "ISC",
     #"Apache-2.0 WITH LLVM-exception",
+	"Unicode-DFS-2016",
     "BSD-3-Clause",
     "OpenSSL",
 ]
