@@ -26,4 +26,3 @@ reorder_modules = true
 reorder_impl_items = true
 edition = "2021"
 color = "Auto"
-report_fixme = "Always"
