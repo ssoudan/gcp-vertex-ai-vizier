@@ -342,7 +342,7 @@ impl VizierClient {
                     .operation_service
                     .wait_operation(WaitOperationRequest {
                         name: operation.name.clone(),
-                        timeout: timeout.map(|d| d.into()),
+                        timeout: timeout.map(|d| d.try_into().unwrap()),
                     })
                     .await
                 {
@@ -603,7 +603,7 @@ mod trials {
         let trial_name = client.trial_name_from_study(&study_name, trial);
 
         let measurement = Measurement {
-            elapsed_duration: Some(Duration::from_secs(10).into()),
+            elapsed_duration: Some(Duration::from_secs(10).try_into().unwrap()),
             step_count: 13,
             metrics: vec![measurement::Metric {
                 metric_id: "m1".to_string(),
@@ -629,7 +629,7 @@ mod trials {
         let trial_name = client.trial_name_from_study(&study_name, trial);
 
         let final_measurement_or_reason = FinalMeasurementOrReason::FinalMeasurement(Measurement {
-            elapsed_duration: Some(Duration::from_secs(100).into()),
+            elapsed_duration: Some(Duration::from_secs(100).try_into().unwrap()),
             step_count: 14,
             metrics: vec![measurement::Metric {
                 metric_id: "m1".to_string(),
@@ -793,7 +793,7 @@ mod studies {
             MeasurementSelectionType::LastMeasurement,
         )
         .with_metric_specs(vec![MetricSpec {
-            metric_id: "m1".to_string(), // TODO(ssoudan) unique and w/o whitespaces
+            metric_id: "m1".to_string(), // FUTURE(ssoudan) unique and w/o whitespaces
             goal: GoalType::Maximize as i32,
         }])
         .with_parameters(vec![
