@@ -28,7 +28,7 @@ pub mod stop;
 pub mod suggest;
 
 /// The name of a trial.
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Eq, Hash)]
 pub struct TrialName(String);
 
 impl TrialName {
