@@ -128,7 +128,7 @@ async fn main() {
 
                     let final_measurement_or_reason =
                         FinalMeasurementOrReason::FinalMeasurement(Measurement {
-                            elapsed_duration: Some(elapsed_duration.into()),
+                            elapsed_duration: Some(elapsed_duration.try_into().unwrap()),
                             step_count: 14,
                             metrics: vec![measurement::Metric {
                                 metric_id: "m".to_string(),

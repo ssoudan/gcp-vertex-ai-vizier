@@ -19,6 +19,8 @@ jobs:
       id-token: 'write'
 
     steps:
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v1
       - uses: actions/checkout@v3
       - name: Build
         run: cargo build --verbose
@@ -56,6 +58,8 @@ jobs:
   clippy_check:
     runs-on: ubuntu-latest
     steps:
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v1
       - uses: actions/checkout@v1
       - run: rustup component add clippy
       - uses: actions-rs/clippy-check@v1
@@ -66,6 +70,8 @@ jobs:
   cargo-deny:
     runs-on: ubuntu-latest
     steps:
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v1
       - uses: actions/checkout@v2
       - uses: EmbarkStudios/cargo-deny-action@v1
 
@@ -73,6 +79,8 @@ jobs:
     name: Docs
     runs-on: ubuntu-latest
     steps:
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v1
       - uses: actions/checkout@v2
       - name: Install Rust
         run: rustup update stable
