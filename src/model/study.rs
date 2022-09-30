@@ -24,7 +24,7 @@ pub mod lookup;
 pub mod spec;
 
 /// The name of a study.
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Eq, Hash)]
 pub struct StudyName(String);
 
 impl StudyName {
