@@ -65,16 +65,19 @@ pub mod google {
 
     /// google.apis protos.
     pub mod api {
+        #![allow(clippy::derive_partial_eq_without_eq)]
         tonic::include_proto!("google.api");
     }
 
     /// google.rpc protos.
     pub mod rpc {
+        #![allow(clippy::derive_partial_eq_without_eq)]
         tonic::include_proto!("google.rpc");
     }
 
     /// google.longrunning protos.
     pub mod longrunning {
+        #![allow(clippy::derive_partial_eq_without_eq)]
         tonic::include_proto!("google.longrunning");
     }
 
@@ -86,6 +89,7 @@ pub mod google {
 
             /// google.cloud.aiplatform.v1 protos.
             pub mod v1 {
+                #![allow(clippy::derive_partial_eq_without_eq)]
                 tonic::include_proto!("google.cloud.aiplatform.v1");
             }
         }
