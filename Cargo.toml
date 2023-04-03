@@ -46,5 +46,5 @@ google-authz = {version = "1.0.0-alpha.5", features = ["tonic"]}
 regex = "1.6.0"
 
 [build-dependencies]
-tonic-build = { version = "0.8", features = ["prost"] }
+tonic-build = { version = "0.9", features = ["prost"] }
 prost-build = { version = "0.11.1" }
