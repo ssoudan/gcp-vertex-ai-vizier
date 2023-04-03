@@ -3,3 +3,4 @@
 /.idea/
 gha-creds-*.json
 gcp.json
+BUILD.sh

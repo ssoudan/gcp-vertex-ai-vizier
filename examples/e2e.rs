@@ -118,8 +118,8 @@ async fn main() {
 
                     let start = SystemTime::now();
 
-                    let x = parameters["x"].clone();
-                    let y = parameters["y"].clone();
+                    let x = parameters["x"];
+                    let y = parameters["y"];
 
                     let value = f(x, y);
 
